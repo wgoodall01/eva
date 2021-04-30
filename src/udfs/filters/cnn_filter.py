@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import torch  # TODO: remove me
+import numpy as np
 import pandas as pd
 from torch import nn, Tensor
 
@@ -61,3 +62,6 @@ class CNNFilter(PytorchAbstractFilter):
         frames = self.relu(self.linear1(frames.reshape(frames.shape[0], -1)))
         frames = self.sigmoid(self.linear2(frames))
         return pd.DataFrame(frames.flatten() > self.threshold)
+
+    def train(self, frames: np.ndarray, target: np.ndarray):
+        print(frames.shape, target.shape)

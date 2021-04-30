@@ -27,7 +27,7 @@ from src.optimizer.operators import (
     LogicalCreate, LogicalInsert, LogicalLoadData,
     LogicalCreateUDF, LogicalProject, LogicalGet, LogicalFilter,
     LogicalUnion, LogicalOrderBy, LogicalLimit, LogicalQueryDerivedGet,
-    LogicalSample)
+    LogicalSample, LogicalTrainFilter)
 from src.planner.create_plan import CreatePlan
 from src.planner.create_udf_plan import CreateUDFPlan
 from src.planner.insert_plan import InsertPlan
@@ -38,6 +38,7 @@ from src.planner.union_plan import UnionPlan
 from src.planner.orderby_plan import OrderByPlan
 from src.planner.limit_plan import LimitPlan
 from src.planner.sample_plan import SamplePlan
+from src.planner.train_plan import TrainFilterPlan
 
 
 class RuleType(Flag):
@@ -65,6 +66,7 @@ class RuleType(Flag):
     LOGICAL_LOAD_TO_PHYSICAL = auto()
     LOGICAL_CREATE_TO_PHYSICAL = auto()
     LOGICAL_CREATE_UDF_TO_PHYSICAL = auto()
+    LOGICAL_TRAIN_FILTER_TO_PHYSICAL = auto()
     LOGICAL_GET_TO_SEQSCAN = auto()
     LOGICAL_SAMPLE_TO_UNIFORMSAMPLE = auto()
     LOGICAL_DERIVED_GET_TO_PHYSICAL = auto()
@@ -85,6 +87,7 @@ class Promise(IntEnum):
     LOGICAL_LOAD_TO_PHYSICAL = auto()
     LOGICAL_CREATE_TO_PHYSICAL = auto()
     LOGICAL_CREATE_UDF_TO_PHYSICAL = auto()
+    LOGICAL_TRAIN_FILTER_TO_PHYSICAL = auto()
     LOGICAL_SAMPLE_TO_UNIFORMSAMPLE = auto()
     LOGICAL_GET_TO_SEQSCAN = auto()
     LOGICAL_DERIVED_GET_TO_PHYSICAL = auto()
@@ -369,6 +372,22 @@ class LogicalCreateUDFToPhysical(Rule):
         return after
 
 
+class LogicalTrainFilterToPhysical(Rule):
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICALTRAIN)
+        super().__init__(RuleType.LOGICAL_TRAIN_FILTER_TO_PHYSICAL, pattern)
+
+    def promise(self):
+        return Promise.LOGICAL_TRAIN_FILTER_TO_PHYSICAL
+
+    def check(self, before: Operator, context: OptimizerContext):
+        return True
+
+    def apply(self, before: LogicalTrainFilter, context: OptimizerContext):
+        after = TrainFilterPlan(before.filter_obj)
+        return after
+
+
 class LogicalInsertToPhysical(Rule):
     def __init__(self):
         pattern = Pattern(OperatorType.LOGICALINSERT)
@@ -537,6 +556,7 @@ class RulesManager:
         self._implementation_rules = [
             LogicalCreateToPhysical(),
             LogicalCreateUDFToPhysical(),
+            LogicalTrainFilterToPhysical(),
             LogicalInsertToPhysical(),
             LogicalLoadToPhysical(),
             LogicalSampleToUniformSample(),

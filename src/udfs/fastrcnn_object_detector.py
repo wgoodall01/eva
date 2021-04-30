@@ -90,19 +90,12 @@ class FastRCNNObjectDetector(PytorchAbstractUDF):
         predictions = self.model(frames)
         outcome = pd.DataFrame()
         for prediction in predictions:
-            pred_class = [str(self.labels[i]) for i in
-                          list(self.as_numpy(prediction['labels']))]
-            pred_boxes = [[[i[0], i[1]],
-                           [i[2], i[3]]]
-                          for i in
-                          list(self.as_numpy(prediction['boxes']))]
-            pred_score = list(self.as_numpy(prediction['scores']))
-            pred_t = \
-                [pred_score.index(x) for x in pred_score if
-                 x > self.threshold][-1]
-            pred_boxes = list(pred_boxes[:pred_t + 1])
-            pred_class = list(pred_class[:pred_t + 1])
-            pred_score = list(pred_score[:pred_t + 1])
+            mask = prediction['scores'] > self.threshold
+            pred_class = [self.labels[x] for x in prediction['labels'][mask]]
+            pred_score = [x.item() for x in prediction['scores'][mask]]
+            pred_boxes = [[[x[0].item(), x[1].item()],
+                           [x[2].item(), x[3].item()]]
+                          for x in prediction['boxes'][mask]]
             outcome = outcome.append(
                 {
                     "label": pred_class,

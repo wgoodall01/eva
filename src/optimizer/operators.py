@@ -21,6 +21,7 @@ from src.parser.table_ref import TableRef
 from src.expression.abstract_expression import AbstractExpression
 from src.catalog.models.df_column import DataFrameColumn
 from src.catalog.models.udf_io import UdfIO
+from src.udfs.filters.abstract_filter import AbstractFilter
 from pathlib import Path
 
 
@@ -41,6 +42,7 @@ class OperatorType(IntEnum):
     LOGICALORDERBY = auto()
     LOGICALLIMIT = auto()
     LOGICALSAMPLE = auto()
+    LOGICALTRAIN = auto()
     LOGICALDELIMITER = auto()
 
 
@@ -479,3 +481,33 @@ class LogicalLoadData(Operator):
         return (is_subtree_equal
                 and self.table_metainfo == other.table_metainfo
                 and self.path == other.path)
+
+
+class LogicalTrainFilter(Operator):
+    """
+    Logical node for filter training operations
+
+    Attributes:
+        filter_obj: AbstractFilter
+            object of filter to be trained
+        target_data: TableRef
+            data containing the mapping from frames to the desired
+            output that is to be learned
+    """
+
+    def __init__(self,
+                 filter_obj: AbstractFilter,
+                 children: List = None):
+        super().__init__(OperatorType.LOGICALTRAIN, children)
+        self._filter_obj = filter_obj
+
+    @property
+    def filter_obj(self):
+        return self._filter_obj
+
+    def __eq__(self, other):
+        is_subtree_equal = super().__eq__(other)
+        if not isinstance(other, LogicalTrainFilter):
+            return False
+        return (is_subtree_equal
+                and self.filter_obj == other.filter_obj)

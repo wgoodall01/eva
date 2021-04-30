@@ -19,19 +19,21 @@ from src.optimizer.operators import (LogicalGet, LogicalFilter, LogicalProject,
                                      LogicalCreateUDF, LogicalLoadData,
                                      LogicalQueryDerivedGet, LogicalUnion,
                                      LogicalOrderBy, LogicalLimit,
-                                     LogicalSample)
+                                     LogicalSample, LogicalTrainFilter)
 from src.parser.statement import AbstractStatement
 from src.parser.select_statement import SelectStatement
 from src.parser.insert_statement import InsertTableStatement
 from src.parser.create_statement import CreateTableStatement
 from src.parser.create_udf_statement import CreateUDFStatement
 from src.parser.load_statement import LoadDataStatement
+from src.parser.train_statement import TrainFilterStatement
 from src.optimizer.optimizer_utils import (bind_table_ref, bind_columns_expr,
                                            bind_predicate_expr,
                                            create_column_metadata,
                                            bind_dataset,
                                            column_definition_to_udf_io,
-                                           create_video_metadata)
+                                           create_video_metadata,
+                                           udf_name_to_object)
 from src.parser.table_ref import TableRef
 from src.utils.logging_manager import LoggingLevel, LoggingManager
 
@@ -225,6 +227,19 @@ class StatementToPlanConvertor:
         load_data_opr = LogicalLoadData(table_metainfo, statement.path)
         self._plan = load_data_opr
 
+    def visit_train_filter(self, statement: TrainFilterStatement):
+        """Convertor for parsed train filter statement
+
+        Arguments:
+            statement {TrainFilterStatement} -- Train Filter Statement
+        """
+        table_ref = statement.target_data
+        self.visit_table_ref(table_ref)
+        filter_obj = udf_name_to_object(statement.name)
+        train_filter_opr = LogicalTrainFilter(filter_obj)
+        train_filter_opr.append_child(self._plan)
+        self._plan = train_filter_opr
+
     def visit(self, statement: AbstractStatement):
         """Based on the instance of the statement the corresponding
            visit is called.
@@ -243,6 +258,8 @@ class StatementToPlanConvertor:
             self.visit_create_udf(statement)
         elif isinstance(statement, LoadDataStatement):
             self.visit_load_data(statement)
+        elif isinstance(statement, TrainFilterStatement):
+            self.visit_train_filter(statement)
         return self._plan
 
     @property

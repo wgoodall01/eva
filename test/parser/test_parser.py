@@ -23,6 +23,7 @@ from src.parser.statement import StatementType
 from src.parser.select_statement import SelectStatement
 from src.parser.create_statement import ColumnDefinition
 from src.parser.create_udf_statement import CreateUDFStatement
+from src.parser.train_statement import TrainFilterStatement
 from src.parser.load_statement import LoadDataStatement
 from src.parser.insert_statement import InsertTableStatement
 
@@ -357,6 +358,30 @@ class ParserTests(unittest.TestCase):
 
         self.assertEqual(create_udf_stmt, expected_stmt)
 
+    def test_train_filter_statement(self):
+        parser = Parser()
+        select_query = """SELECT data, ['car'] <@ FastRCNN(data).labels
+                          FROM MyVideo;
+        """
+        select_stmt = parser.parse(select_query)[0]
+
+        train_filter_query = "TRAIN CarFilter ON {}".format(select_query)
+        expected_stmt = TrainFilterStatement(
+            'CarFilter',
+            TableRef(select_stmt)
+        )
+
+        eva_statement_list = parser.parse(train_filter_query)
+        self.assertIsInstance(eva_statement_list, list)
+        self.assertEqual(len(eva_statement_list), 1)
+        self.assertEqual(
+            eva_statement_list[0].stmt_type,
+            StatementType.TRAIN_FILTER)
+
+        train_filter_stmt = eva_statement_list[0]
+
+        self.assertEqual(train_filter_stmt, expected_stmt)
+
     def test_load_data_statement(self):
         parser = Parser()
         load_data_query = """LOAD DATA INFILE 'data/video.mp4' INTO MyVideo;"""
@@ -419,3 +444,8 @@ class ParserTests(unittest.TestCase):
         self.assertNotEqual(insert_stmt, load_stmt)
         self.assertNotEqual(create_udf, insert_stmt)
         self.assertNotEqual(select_stmt, create_udf)
+
+
+if __name__ == "__main__":
+    test = ParserTests()
+    test.test_train_filter_statement()

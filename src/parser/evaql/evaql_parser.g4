@@ -26,7 +26,7 @@ emptyStatement
 
 ddlStatement
     : createDatabase | createTable | createIndex | createUdf
-    | dropDatabase | dropTable | dropIndex
+    | dropDatabase | dropTable | dropIndex | trainFilter
     ;
 
 dmlStatement
@@ -127,6 +127,11 @@ dropIndex
 dropTable
     : DROP TABLE ifExists?
       tables
+    ;
+
+trainFilter
+    : TRAIN udfName 'ON'
+      tableSourceItem
     ;
 
 // Data Manipulation Language

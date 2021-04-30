@@ -12,34 +12,24 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import IntEnum, unique
+
+from src.executor.abstract_executor import AbstractExecutor
+from src.planner.train_plan import TrainFilterPlan
 
 
-class ColumnConstraintEnum(IntEnum):
-    NULLNOTNULL = 1
-    DEFAULT = 2
-    PRIMARY = 3
-    UNIQUE = 4
+class TrainFilterExecutor(AbstractExecutor):
 
+    def __init__(self, node: TrainFilterPlan):
+        super().__init__(node)
+        self.filter_obj = node.filter_obj
 
-@unique
-class StatementType(IntEnum):
-    """
-    Manages enums for all the sql-like statements supported
-    """
-    SELECT = 1,
-    CREATE = 2,
-    INSERT = 3,
-    CREATE_UDF = 4,
-    LOAD_DATA = 5,
-    TRAIN_FILTER = 6,
-    # add other types
+    def validate(self):
+        pass
 
-
-@unique
-class ParserOrderBySortType(IntEnum):
-    """
-    Manages enums for all order by sort types
-    """
-    ASC = 1
-    DESC = 2
+    def exec(self):
+        """
+        Train the filter
+        """
+        child_executor = self.children[0]
+        for batch in child_executor.exec():
+            self.filter_obj.train(batch)

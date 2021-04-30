@@ -216,3 +216,14 @@ def create_video_metadata(name: str) -> DataFrameMetadata:
     metadata = catalog.create_metadata(
         name, uri, col_metadata, identifier_column='id')
     return metadata
+
+
+def udf_name_to_object(udf_name):
+    catalog = CatalogManager()
+    udf_obj = catalog.get_udf_by_name(udf_name)
+    if udf_obj:
+        return path_to_class(udf_obj.impl_file_path, udf_obj.name)()
+    else:
+        LoggingManager().log(
+            "Could not find UDF {}".format(udf_name),
+            LoggingLevel.ERROR)

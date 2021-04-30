@@ -20,11 +20,13 @@ from src.parser.evaql.evaql_parser import evaql_parser
 from src.expression.function_expression import FunctionExpression, \
     ExecutionMode
 from src.parser.create_udf_statement import CreateUDFStatement
+from src.parser.train_statement import TrainFilterStatement
+from src.parser.table_ref import TableRef
 from src.utils.logging_manager import LoggingLevel, LoggingManager
 
 
 ##################################################################
-# Functions - UDFs, Aggregate Windowed functions
+# Functions - UDFs, Aggregate Windowed functions, Filters
 ##################################################################
 class Functions(evaql_parserVisitor):
     def visitUdfFunction(self, ctx: evaql_parser.UdfFunctionContext):
@@ -104,3 +106,17 @@ class Functions(evaql_parserVisitor):
             impl_path,
             udf_type)
         return stmt
+
+    def visitTrainFilter(self, ctx: evaql_parser.TrainFilterContext):
+        try:
+            udf_name = self.visit(ctx.udfName())
+            table = self.visit(ctx.tableSourceItem())
+            target_data = TableRef(table)
+            stmt = TrainFilterStatement(
+                udf_name,
+                target_data)
+            return stmt
+        except BaseException:
+            LoggingManager().log('TRAIN Failed', LoggingLevel.ERROR)
+            # stop parsing something bad happened
+            return None

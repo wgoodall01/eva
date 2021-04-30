@@ -24,7 +24,6 @@ from src.models.catalog.frame_info import FrameInfo
 class AbstractFilter(metaclass=ABCMeta):
     """
     Abstract class for filter UDFs. All the filter UDFs inherit this class.
-
     Load and initialize any necessary parameters in the __init__.
     """
 
@@ -45,16 +44,24 @@ class AbstractFilter(metaclass=ABCMeta):
     @abstractmethod
     def classify(self, frames: np.ndarray) -> pd.DataFrame:
         """
-        Takes as input a batch of frames and returns true or false
+        Takes as input a batch of frames and returns
         predictions by applying the filter.
-
         Arguments:
-            frames (np.ndarray): Input batch of frames on which prediction
-            needs to be made
-
+            frames (np.ndarray): Input batch of frames
         Returns:
             DataFrame: The predictions made by the filter
         """
 
     def __call__(self, *args, **kwargs):
         return self.classify(*args, **kwargs)
+
+    @abstractmethod
+    def train(self, frames: np.ndarray, target: np.ndarray):
+        """
+        Trains the filter to learn the mapping between input
+        frames and the desired target outputs.
+        Arguments:
+            frames (np.ndarray): Input batch of frames
+                (note: this is a mini-batch, not all frames)
+            target (np.ndarray): Desired target output
+        """

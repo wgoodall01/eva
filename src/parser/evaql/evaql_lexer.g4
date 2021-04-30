@@ -68,6 +68,7 @@ SET:                                 'SET';
 SHUTDOWN:                            'SHUTDOWN';
 SOME:                                'SOME';
 TABLE:                               'TABLE';
+TRAIN:                               'TRAIN';
 TRUE:                                'TRUE';
 UNION:                               'UNION';
 UNIQUE:                              'UNIQUE';

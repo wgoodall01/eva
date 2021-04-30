@@ -22,15 +22,17 @@ class FiltersTest(unittest.TestCase):
 
     def setUp(self):
         CatalogManager().reset()
-        load_query = """LOAD DATA INFILE 'data/m30.mp4' INTO MyVideo;"""
+        load_query = """LOAD DATA INFILE
+                'data/ua_detrac/ua_detrac.mp4'
+                INTO MyVideo;"""
         execute_query_fetch_all(load_query)
 
     def test_object_filtering(self):
         create_udf_query = """CREATE UDF ObjectFilter
-                  INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
-                  OUTPUT (hasObj BOOLEAN)
-                  TYPE  Filter
-                  IMPL  'src/udfs/filters/object_filter.py';
+                INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
+                OUTPUT (hasObj BOOLEAN)
+                TYPE  Filter
+                IMPL  'src/udfs/filters/object_filter.py';
         """
         execute_query_fetch_all(create_udf_query)
 
@@ -39,10 +41,10 @@ class FiltersTest(unittest.TestCase):
 
     def test_color_filtering(self):
         create_udf_query = """CREATE UDF ColorFilter
-                  INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
-                  OUTPUT (hasRed BOOLEAN)
-                  TYPE  Filter
-                  IMPL  'src/udfs/filters/color_filter.py';
+                INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
+                OUTPUT (hasRed BOOLEAN)
+                TYPE  Filter
+                IMPL  'src/udfs/filters/color_filter.py';
         """
         execute_query_fetch_all(create_udf_query)
 
@@ -51,20 +53,46 @@ class FiltersTest(unittest.TestCase):
 
     def test_cnn_filtering(self):
         create_udf_query = """CREATE UDF CNNFilter
-                  INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
-                  OUTPUT (hasCar BOOLEAN)
-                  TYPE  Filter
-                  IMPL  'src/udfs/filters/cnn_filter.py';
+                INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
+                OUTPUT (hasCar BOOLEAN)
+                TYPE  Filter
+                IMPL  'src/udfs/filters/cnn_filter.py';
         """
         execute_query_fetch_all(create_udf_query)
 
         select_query = """SELECT id FROM MyVideo WHERE CNNFilter(data);"""
         execute_query_fetch_all(select_query)
 
+    def test_training(self):
+        create_filter_query = """CREATE UDF CNNFilter
+                INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
+                OUTPUT (hasCar BOOLEAN)
+                TYPE  Filter
+                IMPL  'src/udfs/filters/cnn_filter.py';
+        """
+        execute_query_fetch_all(create_filter_query)
+
+        create_od_query = """CREATE UDF FastRCNNObjectDetector
+                INPUT  (Frame_Array NDARRAY UINT8(3, 256, 256))
+                OUTPUT (label NDARRAY STR(10))
+                TYPE  Classification
+                IMPL  'src/udfs/fastrcnn_object_detector.py';
+        """
+        execute_query_fetch_all(create_od_query)
+
+        select_query = """TRAIN CNNFilter ON
+                SELECT data,
+                ['car'] <@ FastRCNNObjectDetector(data).label
+                FROM MyVideo WHERE id < 10;
+        """
+        actual_batch = execute_query_fetch_all(select_query)
+        print(actual_batch)
+
 
 if __name__ == "__main__":
     test = FiltersTest()
     test.setUp()
-    test.test_object_filtering()
-    test.test_color_filtering()
-    test.test_cnn_filtering()
+    # test.test_object_filtering()
+    # test.test_color_filtering()
+    # test.test_cnn_filtering()
+    test.test_training()
