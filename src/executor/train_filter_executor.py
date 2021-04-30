@@ -32,4 +32,4 @@ class TrainFilterExecutor(AbstractExecutor):
         """
         child_executor = self.children[0]
         for batch in child_executor.exec():
-            self.filter_obj.train(batch)
+            self.filter_obj.train(batch.frames)

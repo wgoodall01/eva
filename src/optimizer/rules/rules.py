@@ -375,6 +375,7 @@ class LogicalCreateUDFToPhysical(Rule):
 class LogicalTrainFilterToPhysical(Rule):
     def __init__(self):
         pattern = Pattern(OperatorType.LOGICALTRAIN)
+        pattern.append_child(Pattern(OperatorType.DUMMY))
         super().__init__(RuleType.LOGICAL_TRAIN_FILTER_TO_PHYSICAL, pattern)
 
     def promise(self):

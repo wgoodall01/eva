@@ -23,7 +23,7 @@ class FiltersTest(unittest.TestCase):
     def setUp(self):
         CatalogManager().reset()
         load_query = """LOAD DATA INFILE
-                'data/ua_detrac/ua_detrac.mp4'
+                'data/m30_short.mp4'
                 INTO MyVideo;"""
         execute_query_fetch_all(load_query)
 
@@ -83,10 +83,9 @@ class FiltersTest(unittest.TestCase):
         select_query = """TRAIN CNNFilter ON
                 SELECT data,
                 ['car'] <@ FastRCNNObjectDetector(data).label
-                FROM MyVideo WHERE id < 10;
+                FROM MyVideo LIMIT 3;
         """
-        actual_batch = execute_query_fetch_all(select_query)
-        print(actual_batch)
+        execute_query_fetch_all(select_query)
 
 
 if __name__ == "__main__":

@@ -60,6 +60,16 @@ class PytorchAbstractFilter(AbstractFilter, nn.Module, GPUCompatible, ABC):
         return self.classify(tens_batch)
 
     @abstractmethod
+    def _forward_pass(self, frames: Tensor) -> Tensor:
+        """
+        Performs the forward pass for this model.
+        Arguments:
+            frames (Tensor): input for the forward pass
+        Returns:
+            Tensor: raw output of the forward pass
+        """
+
+    @abstractmethod
     def _get_predictions(self, frames: Tensor) -> pd.DataFrame:
         """
         Abstract method to work with tensors.

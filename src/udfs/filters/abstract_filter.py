@@ -58,10 +58,9 @@ class AbstractFilter(metaclass=ABCMeta):
     @abstractmethod
     def train(self, frames: np.ndarray, target: np.ndarray):
         """
-        Trains the filter to learn the mapping between input
+        Trains the filter to learn the mapping between
         frames and the desired target outputs.
         Arguments:
-            frames (np.ndarray): Input batch of frames
-                (note: this is a mini-batch, not all frames)
-            target (np.ndarray): Desired target output
+            data (pd.DataFrame): data containing input
+                frames and target outputs
         """
