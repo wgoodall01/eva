@@ -27,7 +27,7 @@ from src.optimizer.operators import (
     LogicalCreate, LogicalInsert, LogicalLoadData,
     LogicalCreateUDF, LogicalProject, LogicalGet, LogicalFilter,
     LogicalUnion, LogicalOrderBy, LogicalLimit, LogicalQueryDerivedGet,
-    LogicalSample, LogicalTrainFilter)
+    LogicalSample, LogicalTrainFilter, LogicalAs)
 from src.planner.create_plan import CreatePlan
 from src.planner.create_udf_plan import CreateUDFPlan
 from src.planner.insert_plan import InsertPlan
@@ -39,6 +39,7 @@ from src.planner.orderby_plan import OrderByPlan
 from src.planner.limit_plan import LimitPlan
 from src.planner.sample_plan import SamplePlan
 from src.planner.train_plan import TrainFilterPlan
+from src.planner.as_plan import AsPlan
 
 
 class RuleType(Flag):
@@ -70,6 +71,7 @@ class RuleType(Flag):
     LOGICAL_GET_TO_SEQSCAN = auto()
     LOGICAL_SAMPLE_TO_UNIFORMSAMPLE = auto()
     LOGICAL_DERIVED_GET_TO_PHYSICAL = auto()
+    LOGICAL_AS_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
 
@@ -91,6 +93,7 @@ class Promise(IntEnum):
     LOGICAL_SAMPLE_TO_UNIFORMSAMPLE = auto()
     LOGICAL_GET_TO_SEQSCAN = auto()
     LOGICAL_DERIVED_GET_TO_PHYSICAL = auto()
+    LOGICAL_AS_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
     # REWRITE RULES
@@ -530,6 +533,23 @@ class LogicalLimitToPhysical(Rule):
         return after
 
 
+class LogicalAsToPhysical(Rule):
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICALAS)
+        pattern.append_child(Pattern(OperatorType.DUMMY))
+        super().__init__(RuleType.LOGICAL_AS_TO_PHYSICAL, pattern)
+
+    def promise(self):
+        return Promise.LOGICAL_AS_TO_PHYSICAL
+
+    def check(self, before: Operator, context: OptimizerContext):
+        return True
+
+    def apply(self, before: LogicalAs, context: OptimizerContext):
+        after = AsPlan(before.alias_map)
+        return after
+
+
 # IMPLEMENTATION RULES END
 ##############################################
 
@@ -565,7 +585,8 @@ class RulesManager:
             LogicalDerivedGetToPhysical(),
             LogicalUnionToPhysical(),
             LogicalOrderByToPhysical(),
-            LogicalLimitToPhysical()
+            LogicalLimitToPhysical(),
+            LogicalAsToPhysical()
         ]
 
     @property

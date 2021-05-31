@@ -47,8 +47,9 @@ class SequentialScanExecutor(AbstractExecutor):
                         drop=True))
 
             # Then do project
+            print("seq scan: ", self.project_expr)
             if not batch.empty() and self.project_expr is not None:
                 batches = [expr.evaluate(batch) for expr in self.project_expr]
                 batch = Batch.merge_column_wise(batches)
-
+            print("seq frames: ", batch.frames)
             yield batch

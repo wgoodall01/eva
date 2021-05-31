@@ -22,7 +22,9 @@ class UdfMetadata(BaseModel):
     __tablename__ = 'udf'
 
     _name = Column('name', String(100), unique=True)
-    _impl_file_path = Column('impl_file_path', String(128))
+
+    # Make it longer to fit longer file names
+    _impl_file_path = Column('impl_file_path', String(300))
     _type = Column('type', String(100))
 
     _cols = relationship('UdfIO',

@@ -12,22 +12,26 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from enum import unique, IntEnum, auto
+
+from src.planner.abstract_plan import AbstractPlan
+from src.planner.types import PlanOprType
+from src.expression.constant_value_expression import ConstantValueExpression
 
 
-@unique
-class PlanOprType(IntEnum):
-    SEQUENTIAL_SCAN = auto()
-    STORAGE_PLAN = auto()
-    PP_FILTER = auto()
-    INSERT = auto()
-    CREATE = auto()
-    CREATE_UDF = auto()
-    LOAD_DATA = auto()
-    UNION = auto()
-    ORDER_BY = auto()
-    LIMIT = auto()
-    SAMPLE = auto()
-    TRAIN = auto()
-    AS = auto()
-    # add other types
+class AsPlan(AbstractPlan):
+    """
+    This plan is used for storing information required for as
+    operations.
+
+    Arguments:
+        alias_map: map column name to alias.
+    """
+
+    def __init__(self, alias_map: dict):
+        self._alias_map = alias_map
+        super().__init__(PlanOprType.AS)
+
+    @property
+    def alias_map(self):
+        return self._alias_map
+

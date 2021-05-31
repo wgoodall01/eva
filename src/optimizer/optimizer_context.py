@@ -81,6 +81,7 @@ class OptimizerContext:
             expr = GroupExpression(opr=opr, group_id=INVALID_GROUP_ID,
                                    children=child_ids)
             expr = self.memo.add_group_expr(expr)
+            # print("memo: ", [l.logical_exprs[0].opr for l in self.memo.groups])
             if root_group_id != INVALID_GROUP_ID and \
                     expr.group_id == root_group_id:
                 # This expr has the same group_id with the root one,

@@ -43,7 +43,9 @@ class OperatorType(IntEnum):
     LOGICALLIMIT = auto()
     LOGICALSAMPLE = auto()
     LOGICALTRAIN = auto()
+    LOGICALAS = auto()
     LOGICALDELIMITER = auto()
+
 
 
 class Operator:
@@ -511,3 +513,30 @@ class LogicalTrainFilter(Operator):
             return False
         return (is_subtree_equal
                 and self.filter_obj == other.filter_obj)
+
+class LogicalAs(Operator):
+    """
+    Logical node for column aliasing operations
+
+    Attributes:
+        alias_map: list of alias for column renaming
+    """
+
+    def __init__(self,
+                 alias_map: dict,
+                 children=None):
+        super().__init__(OperatorType.LOGICALAS, children)
+        self._alias_map = alias_map
+
+    @property
+    def alias_map(self):
+        return self._alias_map
+
+    def __eq__(self, other):
+        is_subtree_equal = super().__eq__(other)
+        if not isinstance(other, LogicalAs):
+            return False
+        return (is_subtree_equal
+                and self.alias_map == other.alias_map)
+
+

@@ -51,6 +51,7 @@ class CustomModel:
         """
         try:
             db_session.add(self)
+            print("db_session", db_session)
             self._commit()
         except Exception as e:
             LoggingManager().log("Object already exists in database",

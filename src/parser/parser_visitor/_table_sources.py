@@ -66,7 +66,8 @@ class TableSources(evaql_parserVisitor):
 
     def visitQuerySpecification(
             self, ctx: evaql_parser.QuerySpecificationContext):
-        target_list = None
+        target_list = []
+        alias_list = []
         from_clause = None
         where_clause = None
         orderby_clause = None
@@ -78,7 +79,10 @@ class TableSources(evaql_parserVisitor):
             try:
                 rule_idx = child.getRuleIndex()
                 if rule_idx == evaql_parser.RULE_selectElements:
-                    target_list = self.visit(child)
+                    elements = self.visit(child)
+                    for element in elements:
+                        target_list.append(element[0])
+                        alias_list.append(element[1])
 
                 elif rule_idx == evaql_parser.RULE_fromClause:
                     clause = self.visit(child)
@@ -101,8 +105,12 @@ class TableSources(evaql_parserVisitor):
         if from_clause is not None:
             from_clause = from_clause[0]
 
+        print("alias: ", alias_list)
         select_stmt = SelectStatement(
-            target_list, from_clause, where_clause,
+            target_list=target_list,
+            from_table=from_clause,
+            where_clause=where_clause,
+            alias_list=alias_list,
             orderby_clause_list=orderby_clause,
             limit_count=limit_count)
 
@@ -112,10 +120,37 @@ class TableSources(evaql_parserVisitor):
         select_list = []
         select_elements_count = len(ctx.selectElement())
         for select_element_index in range(select_elements_count):
-            element = self.visit(ctx.selectElement(select_element_index))
-            select_list.append(element)
-
+            print("ctx: ", ctx.selectElement(select_element_index))
+            element, uid = self.visit(ctx.selectElement(select_element_index))
+            print("element: ", element)
+            print("uid: ", uid)
+            select_list.append((element, uid))
         return select_list
+
+    def visitSelectStarElement(self, ctx:evaql_parser.SelectStarElementContext):
+        id = self.visit(ctx.fullId())
+        return id, None
+
+    def visitSelectFunctionElement(self, ctx:evaql_parser.SelectFunctionElementContext):
+        func = self.visit(ctx.functionCall())
+        uid = ctx.uid()
+        if uid is not None:
+            uid = self.visit(uid)
+        return func, uid
+
+    def visitSelectColumnElement(self, ctx:evaql_parser.SelectColumnElementContext):
+        col_name = self.visit(ctx.fullColumnName())
+        uid = ctx.uid()
+        if uid is not None:
+            uid = self.visit(uid)
+        return col_name, uid
+
+    def visitSelectExpressionElement(self, ctx:evaql_parser.SelectExpressionElementContext):
+        exp = self.visit(ctx.expression())
+        uid = ctx.uid()
+        if uid is not None:
+            uid = self.visit(uid)
+        return exp, uid
 
     def visitFromClause(self, ctx: evaql_parser.FromClauseContext):
         from_table = None

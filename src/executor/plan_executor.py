@@ -16,6 +16,7 @@ from typing import Iterator
 
 from src.executor.abstract_executor import AbstractExecutor
 from src.executor.limit_executor import LimitExecutor
+from src.executor.as_executor import AsExecutor
 from src.executor.sample_executor import SampleExecutor
 from src.executor.seq_scan_executor import SequentialScanExecutor
 from src.models.storage.batch import Batch
@@ -85,6 +86,8 @@ class PlanExecutor:
             executor_node = SampleExecutor(node=plan)
         elif plan_opr_type == PlanOprType.TRAIN:
             executor_node = TrainFilterExecutor(node=plan)
+        elif plan_opr_type == PlanOprType.AS:
+            executor_node = AsExecutor(node=plan)
 
         # Build Executor Tree for children
         for children in plan.children:

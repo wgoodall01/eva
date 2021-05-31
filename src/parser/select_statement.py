@@ -43,6 +43,7 @@ class SelectStatement(AbstractStatement):
     """
 
     def __init__(self, target_list: List[AbstractExpression] = None,
+                 alias_list: List[TableRef] = None,
                  from_table: Union[TableRef, SelectStatement] = None,
                  where_clause: AbstractExpression = None,
                  **kwargs):
@@ -50,6 +51,7 @@ class SelectStatement(AbstractStatement):
         self._from_table = from_table
         self._where_clause = where_clause
         self._target_list = target_list
+        self._alias_list = alias_list
         self._union_link = None
         self._union_all = False
         self._orderby_list = kwargs.get("orderby_clause_list", None)
@@ -86,6 +88,14 @@ class SelectStatement(AbstractStatement):
     @target_list.setter
     def target_list(self, target_expr_list: List[AbstractExpression]):
         self._target_list = target_expr_list
+
+    @property
+    def alias_list(self):
+        return self._alias_list
+
+    @alias_list.setter
+    def alias_list(self, alias_list: List[TableRef]):
+        self._alias_list = alias_list
 
     @property
     def from_table(self):
@@ -127,7 +137,7 @@ class SelectStatement(AbstractStatement):
 
         if self._limit_count is not None:
             print_str += " LIMIT " + str(self._limit_count)
-
+            
         return print_str
 
     def __eq__(self, other):

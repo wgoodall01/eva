@@ -13,13 +13,16 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 from src.catalog.models.df_metadata import DataFrameMetadata
-from src.expression.abstract_expression import AbstractExpression
+from src.expression.abstract_expression import AbstractExpression, ExpressionType
+from src.expression.function_expression import FunctionExpression
+from src.expression.tuple_value_expression import TupleValueExpression
 from src.optimizer.operators import (LogicalGet, LogicalFilter, LogicalProject,
                                      LogicalInsert, LogicalCreate,
                                      LogicalCreateUDF, LogicalLoadData,
                                      LogicalQueryDerivedGet, LogicalUnion,
                                      LogicalOrderBy, LogicalLimit,
-                                     LogicalSample, LogicalTrainFilter)
+                                     LogicalSample, LogicalTrainFilter,
+                                     LogicalAs)
 from src.parser.statement import AbstractStatement
 from src.parser.select_statement import SelectStatement
 from src.parser.insert_statement import InsertTableStatement
@@ -75,7 +78,6 @@ class StatementToPlanConvertor:
         Arguments:
             statement {SelectStatement} -- [input select statement]
         """
-
         table_ref = statement.from_table
         if table_ref is None:
             LoggingManager().log('From entry missing in select statement',
@@ -97,6 +99,24 @@ class StatementToPlanConvertor:
         if select_columns is not None:
             self._visit_projection(select_columns)
 
+
+        # get alias map
+        alias_map = {}
+        for expr, alias in zip(select_columns, statement.alias_list):
+            print(expr.etype)
+            if expr.etype == ExpressionType.FUNCTION_EXPRESSION:
+                output_name = expr.output
+                if alias is not None:
+                    alias_map[output_name] = alias
+                else:
+                    alias_map[output_name] = output_name
+            if expr.etype == ExpressionType.TUPLE_VALUE:
+                col_name = expr.col_name
+                if alias is not None:
+                    alias_map[col_name] = alias
+                else:
+                    alias_map[col_name] = col_name
+
         # union
         if statement.union_link is not None:
             self._visit_union(statement.union_link, statement.union_all)
@@ -106,6 +126,14 @@ class StatementToPlanConvertor:
 
         if statement.limit_count is not None:
             self._visit_limit(statement.limit_count)
+
+        if statement.alias_list is not None:
+            self._visit_as(alias_map)
+
+    def _visit_as(self, alias_map):
+        as_opr = LogicalAs(alias_map=alias_map)
+        as_opr.append_child(self._plan)
+        self._plan = as_opr
 
     def _visit_sample(self, sample_freq):
         sample_opr = LogicalSample(sample_freq)
@@ -164,6 +192,7 @@ class StatementToPlanConvertor:
                 col.table_name = table_ref.table.table_name
             if col.table_metadata_id is None:
                 col.table_metadata_id = catalog_table_id
+
         bind_columns_expr(col_list, {})
 
         # Nothing to be done for values as we add support for other variants of
