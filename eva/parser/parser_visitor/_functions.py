@@ -14,6 +14,7 @@
 # limitations under the License.
 
 from antlr4 import TerminalNode
+from eva.expression.window_function_expression import WindowFunctionExpression
 
 from eva.parser.evaql.evaql_parserVisitor import evaql_parserVisitor
 from eva.parser.evaql.evaql_parser import evaql_parser
@@ -104,3 +105,35 @@ class Functions(evaql_parserVisitor):
             impl_path,
             udf_type)
         return stmt
+
+    def visitWindowFunction(self, ctx: evaql_parser.WindowFunctionContext):
+        aggregate_func = self.visit(ctx.functionCall())
+        order_by, frame_start, frame_end = self.visit(ctx.windowDefinition())
+        return WindowFunctionExpression(aggregate_func,
+                                        order_by,
+                                        frame_start,
+                                        frame_end)
+
+    def visitWindowDefinition(self, ctx: evaql_parser.WindowDefinitionContext):
+        order_by = None
+        if ctx.orderByClause():
+            order_by = self.visit(ctx.orderByClause())
+
+        frame_start, frame_end = self.visit(ctx.frameClause())
+        return order_by, frame_start, frame_end
+
+    def visitFrameClause(self, ctx: evaql_parser.FrameClauseContext):
+        frame_start = self.visit(ctx.frameStart)
+        frame_end = self.visit(ctx.frameEnd)
+        return frame_start, frame_end
+
+    def visitSlidingFrame(self, ctx: evaql_parser.SlidingFrameContext):
+        # CURRENT ROW -> 0
+        # <N> PRECEDING -> -N
+        # <N> FOLLOWING -> N
+        if ctx.PRECEDING():
+            return -self.visit(ctx.decimalLiteral())
+        elif ctx.FOLLOWING():
+            return self.visit(ctx.decimalLiteral())
+        elif ctx.CURRENT() and ctx.ROW():
+            return 0

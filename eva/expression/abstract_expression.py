@@ -43,7 +43,7 @@ class ExpressionType(IntEnum):
     ARITHMETIC_DIVIDE = auto()
 
     FUNCTION_EXPRESSION = auto()
-
+    WINDOW_FUNCTION_EXPRESSION = auto()
     AGGREGATION_COUNT = auto()
     AGGREGATION_SUM = auto()
     AGGREGATION_MIN = auto()

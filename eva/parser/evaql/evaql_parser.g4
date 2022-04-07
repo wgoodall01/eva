@@ -287,6 +287,7 @@ selectElement
     | fullColumnName (AS? uid)?                                     #selectColumnElement
     | functionCall (AS? uid)?                                       #selectFunctionElement
     | (LOCAL_ID VAR_ASSIGN)? expression (AS? uid)?                  #selectExpressionElement
+    | windowFunction (AS? uid)?                                     #selectWindowElement
     ;
 
 fromClause
@@ -488,15 +489,30 @@ ifNotExists
 
 functionCall
     : udfFunction                                              #udfFunctionCall
-    | aggregateWindowedFunction                                #aggregateFunctionCall
+    | aggregateFunction                                #aggregateFunctionCall
     ;
 
 udfFunction
     : simpleId '(' functionArgs ')' dottedId?
     ;
 
+windowFunction
+    : functionCall OVER '(' windowDefinition ')'
+    ;
 
-aggregateWindowedFunction
+windowDefinition
+    : orderByClause? frameClause
+    ;
+
+frameClause
+    : ROWS BETWEEN frameStart=slidingFrame AND frameEnd=slidingFrame
+    ;
+
+slidingFrame
+    :  CURRENT ROW | decimalLiteral PRECEDING | decimalLiteral FOLLOWING
+    ;
+
+aggregateFunction
     : (AVG | MAX | MIN | SUM)
       '(' aggregator=(ALL | DISTINCT)? functionArg ')'
     | COUNT '(' (starArg='*' | aggregator=ALL? functionArg) ')'

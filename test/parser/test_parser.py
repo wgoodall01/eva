@@ -14,6 +14,7 @@
 # limitations under the License.
 
 import unittest
+from eva.expression.window_function_expression import WindowFunctionExpression
 from eva.parser.create_mat_view_statement \
     import CreateMaterializedViewStatement
 
@@ -489,6 +490,41 @@ class ParserTests(unittest.TestCase):
         ], False, select_stmt[0])
         self.assertEqual(mat_view_stmt[0], expected_stmt)
 
+    def test_window_function(self):
+        select_query = '''SELECT UDF(data)
+                          FROM MyVideo ORDER BY id;'''
+        window_select_query1 = '''SELECT UDF(data) OVER
+                                    (ROWS BETWEEN CURRENT ROW AND 10 FOLLOWING)
+                                    FROM MyVideo;'''
+        window_select_query2 = '''SELECT UDF(data) OVER
+                                    (ROWS BETWEEN 10 PRECEDING AND CURRENT ROW)
+                                    FROM MyVideo;'''
+        window_select_query3 = '''SELECT UDF(data) OVER
+                                    (ROWS BETWEEN 2 PRECEDING AND 10 FOLLOWING)
+                                    FROM MyVideo;'''
+        window_select_query4 = '''SELECT UDF(data) OVER (ORDER BY id
+                                    ROWS BETWEEN 10 PRECEDING AND 2 PRECEDING)
+                                    FROM MyVideo;'''
 
-if __name__ == '__main__':
-    unittest.main()
+        parser = Parser()
+        select_stmt = parser.parse(select_query)[0]
+        select_window_func1 = parser.parse(window_select_query1)[
+            0].target_list[0]
+        select_window_func2 = parser.parse(window_select_query2)[
+            0].target_list[0]
+        select_window_func3 = parser.parse(window_select_query3)[
+            0].target_list[0]
+        select_window_func4 = parser.parse(window_select_query4)[
+            0].target_list[0]
+        window_func1 = WindowFunctionExpression(
+            select_stmt.target_list[0], None, 0, 10)
+        window_func2 = WindowFunctionExpression(
+            select_stmt.target_list[0], None, -10, 0)
+        window_func3 = WindowFunctionExpression(
+            select_stmt.target_list[0], None, -2, 10)
+        window_func4 = WindowFunctionExpression(
+            select_stmt.target_list[0], select_stmt.orderby_list, -10, -2)
+        self.assertEqual(window_func1, select_window_func1)
+        self.assertEqual(window_func2, select_window_func2)
+        self.assertEqual(window_func3, select_window_func3)
+        self.assertEqual(window_func4, select_window_func4)
