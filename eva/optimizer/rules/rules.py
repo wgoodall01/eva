@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING
 
 from eva.optimizer.optimizer_utils import (
     extract_equi_join_keys,
+    extract_function_expressions,
     extract_pushdown_predicate,
 )
 from eva.optimizer.rules.pattern import Pattern
@@ -461,18 +462,49 @@ class PullUDFFromFilterToCrossApply(Rule):
         return Promise.PULL_UDF_FROM_FILTER_TO_CROSS_APPLY
 
     def check(self, before: LogicalFilter, context: OptimizerContext):
-        # has to be an inner join
-        return before.join_type == JoinType.INNER_JOIN
+        # filter should have atleast one UDF
+        predicate = before.predicate
 
-    def apply(self, before: LogicalJoin, context: OptimizerContext):
-        #     LogicalJoin(Inner)            LogicalJoin(Inner)
-        #     /           \        ->       /               \
-        #    A             B               B                A
+        function_exprs, _ = extract_function_expressions(predicate)
+        if len(function_exprs):
+            return True
+        else:
+            return False
 
-        new_join = LogicalJoin(before.join_type, before.join_predicate)
-        new_join.append_child(before.rhs())
-        new_join.append_child(before.lhs())
-        return new_join
+    def apply(self, before: LogicalFilter, context: OptimizerContext):
+        # Pull the Function Expressions from the predicate and add them as Function Scans.
+        # The original predicate using function expression is added as a simple predicate on outputs of function expression.
+        #
+        #                                        LogicalApply
+        #     LogicalFilter                    /             \
+        #         |                      LogicalApply     Filter(F2)
+        #  (P AND F1 AND F2)  ->           /        \          \
+        #         |                 Filter(P)   Filter(F1)    FunctionScan(F1)
+        #         A                    /             \
+        #                            A            FunctionScan(F1)
+        # Ordering of F1 and F2 is arbitrary
+
+        A: Operator = before.children[0]
+        function_exprs, rem_predicate = extract_function_expressions(
+            before.predicate
+        )
+        new_opr = None
+        if rem_predicate:
+            pred = LogicalFilter(rem_predicate)
+            pred.append_child(A)
+            new_opr = pred
+        else:
+            new_opr = A
+
+        for expr in function_exprs:
+            pred = convert_function_expr_to_simple_predicate(expr)
+            simple_pred = LogicalFilter(pred)
+            function_scan = convert_function_expr_to_function_scan(expr)
+            simple_pred.append_child(function_scan)
+            new_opr = LogicalApply(new_opr, simple_pred)
+
+        return new_opr
+
 
 # LOGICAL RULES END
 ##############################################
@@ -494,7 +526,9 @@ class LogicalCreateToPhysical(Rule):
         return True
 
     def apply(self, before: LogicalCreate, context: OptimizerContext):
-        after = CreatePlan(before.video, before.column_list, before.if_not_exists)
+        after = CreatePlan(
+            before.video, before.column_list, before.if_not_exists
+        )
         return after
 
 
@@ -581,7 +615,9 @@ class LogicalInsertToPhysical(Rule):
         return True
 
     def apply(self, before: LogicalInsert, context: OptimizerContext):
-        after = InsertPlan(before.table_metainfo, before.column_list, before.value_list)
+        after = InsertPlan(
+            before.table_metainfo, before.column_list, before.value_list
+        )
         return after
 
 
@@ -846,7 +882,9 @@ class LogicalCreateMaterializedViewToPhysical(Rule):
     def __init__(self):
         pattern = Pattern(OperatorType.LOGICAL_CREATE_MATERIALIZED_VIEW)
         pattern.append_child(Pattern(OperatorType.DUMMY))
-        super().__init__(RuleType.LOGICAL_MATERIALIZED_VIEW_TO_PHYSICAL, pattern)
+        super().__init__(
+            RuleType.LOGICAL_MATERIALIZED_VIEW_TO_PHYSICAL, pattern
+        )
 
     def promise(self):
         return Promise.LOGICAL_MATERIALIZED_VIEW_TO_PHYSICAL
@@ -854,7 +892,9 @@ class LogicalCreateMaterializedViewToPhysical(Rule):
     def check(self, grp_id: int, context: OptimizerContext):
         return True
 
-    def apply(self, before: LogicalCreateMaterializedView, context: OptimizerContext):
+    def apply(
+        self, before: LogicalCreateMaterializedView, context: OptimizerContext
+    ):
         after = CreateMaterializedViewPlan(
             before.view,
             columns=before.col_list,
@@ -969,7 +1009,9 @@ class RulesManager:
             LogicalShowToPhysical(),
         ]
         self._all_rules = (
-            self._rewrite_rules + self._logical_rules + self._implementation_rules
+            self._rewrite_rules
+            + self._logical_rules
+            + self._implementation_rules
         )
 
     @property

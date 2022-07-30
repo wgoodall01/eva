@@ -22,6 +22,8 @@ from eva.expression.expression_utils import (
     expression_tree_to_conjunction_list,
     is_simple_predicate,
 )
+from eva.expression.function_expression import FunctionExpression
+from eva.optimizer.operators import LogicalFunctionScan
 from eva.parser.create_statement import ColumnDefinition
 from eva.utils.logging_manager import logger
 
@@ -119,3 +121,31 @@ def extract_pushdown_predicate(
         conjuction_list_to_expression_tree(pushdown_preds),
         conjuction_list_to_expression_tree(rem_pred),
     )
+
+
+def extract_function_expressions(predicate: AbstractExpression) -> Tuple[List[FunctionExpression], AbstractExpression]:
+    """Decompose the predicate into a list of function expressions and remaining predicate
+
+    Args:
+        predicate (AbstractExpression): input predicate
+
+    Returns:
+        Tuple[List[FunctionExpression], AbstractExpression]: list of function expressions and remaining predicate
+    """
+    pred_list = expression_tree_to_conjunction_list(predicate)
+    function_exprs = []
+    remaining_exprs = []
+    for pred in pred_list:
+        if isinstance(pred, FunctionExpression):
+            function_exprs.append(pred)
+        else:
+            remaining_exprs.append(pred)
+
+    return (
+        function_exprs,
+        conjuction_list_to_expression_tree(remaining_exprs)
+    )
+
+
+def convert_function_expr_to_function_scan(func_expr: FunctionExpression):
+    LogicalFunctionScan()
