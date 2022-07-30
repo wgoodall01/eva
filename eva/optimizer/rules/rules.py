@@ -96,6 +96,9 @@ class RuleType(Flag):
 
     # TRANSFORMATION RULES (LOGICAL -> LOGICAL)
     LOGICAL_INNER_JOIN_COMMUTATIVITY = auto()
+    PULL_UDF_FROM_FILTER_TO_CROSS_APPLY = auto()
+    MERGE_UDF_ACROSS_CROSS_APPLY = auto()
+    REORDER_UDF_ACROSS_CROSS_APPLY = auto()
     TRANSFORMATION_DELIMETER = auto()
 
     # IMPLEMENTATION RULES (LOGICAL -> PHYSICAL)
@@ -422,6 +425,29 @@ class LogicalInnerJoinCommutativity(Rule):
         new_join.append_child(before.lhs())
         return new_join
 
+
+class PullUDFFromFilterToCrossApply(Rule):
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICALFILTER)
+        pattern.append_child(Pattern(OperatorType.DUMMY))
+        super().__init__(RuleType.PULL_UDF_FROM_FILTER_TO_CROSS_APPLY, pattern)
+
+    def promise(self):
+        return Promise.PULL_UDF_FROM_FILTER_TO_CROSS_APPLY
+
+    def check(self, before: LogicalFilter, context: OptimizerContext):
+        # has to be an inner join
+        return before.join_type == JoinType.INNER_JOIN
+
+    def apply(self, before: LogicalJoin, context: OptimizerContext):
+        #     LogicalJoin(Inner)            LogicalJoin(Inner)
+        #     /           \        ->       /               \
+        #    A             B               B                A
+
+        new_join = LogicalJoin(before.join_type, before.join_predicate)
+        new_join.append_child(before.rhs())
+        new_join.append_child(before.lhs())
+        return new_join
 
 # LOGICAL RULES END
 ##############################################
