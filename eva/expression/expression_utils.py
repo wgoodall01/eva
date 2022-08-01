@@ -15,11 +15,16 @@
 
 from typing import List
 
-from eva.expression.abstract_expression import AbstractExpression, ExpressionType
+from eva.expression.abstract_expression import (
+    AbstractExpression,
+    ExpressionType,
+)
 from eva.expression.comparison_expression import ComparisonExpression
 from eva.expression.constant_value_expression import ConstantValueExpression
+from eva.expression.function_expression import FunctionExpression
 from eva.expression.logical_expression import LogicalExpression
 from eva.expression.tuple_value_expression import TupleValueExpression
+from eva.utils.logging_manager import logger
 
 
 def expression_tree_to_conjunction_list(expression_tree):
@@ -52,7 +57,9 @@ def conjuction_list_to_expression_tree(
         return None
     prev_expr = expression_list[0]
     for expr in expression_list[1:]:
-        prev_expr = LogicalExpression(ExpressionType.LOGICAL_AND, prev_expr, expr)
+        prev_expr = LogicalExpression(
+            ExpressionType.LOGICAL_AND, prev_expr, expr
+        )
     return prev_expr
 
 
@@ -80,7 +87,9 @@ def extract_range_list_from_comparison_expr(
     """
 
     if not isinstance(expr, ComparisonExpression):
-        raise RuntimeError(f"Expected Comparision Expression, got {type(expr)}")
+        raise RuntimeError(
+            f"Expected Comparision Expression, got {type(expr)}"
+        )
     left = expr.children[0]
     right = expr.children[1]
     expr_type = expr.etype
@@ -198,14 +207,20 @@ def extract_range_list_from_predicate(
 
     elif isinstance(predicate, ComparisonExpression):
         return union(
-            extract_range_list_from_comparison_expr(predicate, lower_bound, upper_bound)
+            extract_range_list_from_comparison_expr(
+                predicate, lower_bound, upper_bound
+            )
         )
 
     else:
-        raise RuntimeError(f"Contains unsuporrted expression {type(predicate)}")
+        raise RuntimeError(
+            f"Contains unsuporrted expression {type(predicate)}"
+        )
 
 
-def contains_single_column(predicate: AbstractExpression, column: str = None) -> bool:
+def contains_single_column(
+    predicate: AbstractExpression, column: str = None
+) -> bool:
     """Checks if predicate contains conditions on single predicate
 
     Args:
@@ -265,4 +280,37 @@ def is_simple_predicate(predicate: AbstractExpression) -> bool:
         ConstantValueExpression,
     ]
 
-    return _has_simple_expressions(predicate) and contains_single_column(predicate)
+    return _has_simple_expressions(predicate) and contains_single_column(
+        predicate
+    )
+
+
+def function_expression_to_tuple_value_expression(
+    func_expr: FunctionExpression,
+) -> TupleValueExpression:
+    """Rewrite FunctionExpression as predicate on output columns.
+
+    Args:
+        func_expr (FunctionExpression): fucntion expression to convert
+
+    Returns:
+        TupleValueExpression: resulting tuple value expression.
+            `None` if the conversion failed
+    """
+
+    if not isinstance(func_expr, FunctionExpression):
+        logger.warning(f"Invalid arg {type(func_expr)}")
+        return None
+
+    if len(func_expr.output_col_aliases) > 1:
+        logger.warning(
+            "Cannot handle function expression with multiple return values"
+        )
+        return None
+
+    return TupleValueExpression(
+        col_name=func_expr.output,
+        table_alias=func_expr.name,
+        col_object=func_expr.output_objs[0],
+        col_alias=func_expr.output_col_aliases[0],
+    )

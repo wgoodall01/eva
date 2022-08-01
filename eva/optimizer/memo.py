@@ -12,6 +12,8 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
+import itertools
 from typing import Dict, List
 
 from eva.constants import UNDEFINED_GROUP_ID
@@ -132,3 +134,19 @@ class Memo:
                                                         valid group
                                                         id"""
         return expr
+
+    def get_all_logical_plans(self, group_id):
+        plans = []
+        root_group = self.get_group_by_id(group_id)
+        for expr in root_group.logical_exprs:
+            child_plans = []
+            for child in expr.children:
+                child_plans.append(self.get_all_logical_plans(child))
+
+            for plan_comb in itertools.product(*child_plans):
+                root_opr = copy.deepcopy(expr.opr)
+                for child_opr in plan_comb:
+                    root_opr.append_child(child_opr)
+                plans.append(root_opr)
+
+        return plans

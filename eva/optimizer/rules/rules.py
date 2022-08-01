@@ -19,6 +19,7 @@ from enum import Flag, IntEnum, auto
 from typing import TYPE_CHECKING
 
 from eva.optimizer.optimizer_utils import (
+    convert_function_expr_to_function_scan,
     extract_equi_join_keys,
     extract_function_expressions,
     extract_pushdown_predicate,
@@ -165,6 +166,7 @@ class Promise(IntEnum):
 
     # TRANSFORMATION RULES (LOGICAL -> LOGICAL)
     LOGICAL_INNER_JOIN_COMMUTATIVITY = auto()
+    PULL_UDF_FROM_FILTER_TO_CROSS_APPLY = auto()
 
     # REWRITE RULES
     EMBED_FILTER_INTO_GET = auto()
@@ -472,7 +474,7 @@ class PullUDFFromFilterToCrossApply(Rule):
             return False
 
     def apply(self, before: LogicalFilter, context: OptimizerContext):
-        # Pull the Function Expressions from the predicate and add them as Function Scans.
+        # Pull the Function Expressions from the predicate and add as Function Scans.
         # The original predicate using function expression is added as a simple predicate on outputs of function expression.
         #
         #                                        LogicalApply
@@ -497,11 +499,12 @@ class PullUDFFromFilterToCrossApply(Rule):
             new_opr = A
 
         for expr in function_exprs:
-            pred = convert_function_expr_to_simple_predicate(expr)
-            simple_pred = LogicalFilter(pred)
             function_scan = convert_function_expr_to_function_scan(expr)
-            simple_pred.append_child(function_scan)
-            new_opr = LogicalApply(new_opr, simple_pred)
+            join = LogicalJoin(JoinType.LATERAL_JOIN)
+            join.append_child(new_opr)
+            join.append_child(function_scan)
+            new_opr = join
+            # new_opr = LogicalJoin(new_opr, function_scan)
 
         return new_opr
 
@@ -983,6 +986,7 @@ class RulesManager:
             EmbedProjectIntoGet(),
             # EmbedProjectIntoDerivedGet(),
             PushdownProjectThroughSample(),
+            PullUDFFromFilterToCrossApply()
         ]
 
         self._implementation_rules = [

@@ -60,13 +60,14 @@ class PlanGenerator:
             TopDownRewrite(root_expr, RulesManager().rewrite_rules, optimizer_context)
         )
         self.execute_task_stack(optimizer_context.task_stack)
-
+        print(optimizer_context.memo.get_all_logical_plans(root_grp_id))
         # BottomUp Rewrite
         root_expr = memo.groups[root_grp_id].logical_exprs[0]
         optimizer_context.task_stack.push(
             BottomUpRewrite(root_expr, RulesManager().rewrite_rules, optimizer_context)
         )
         self.execute_task_stack(optimizer_context.task_stack)
+        # print(optimizer_context.memo.get_all_logical_plans(root_grp_id))
 
         # Optimize Expression (logical -> physical transformation)
         root_group = memo.get_group_by_id(root_grp_id)

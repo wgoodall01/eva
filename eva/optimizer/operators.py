@@ -91,6 +91,9 @@ class Operator:
             ", ".join("%s=%s" % item for item in vars(self).items()),
         )
 
+    def __repr__(self):
+        return str(self)
+
     def __eq__(self, other):
         is_subtree_equal = True
         if not isinstance(other, Operator):

@@ -35,14 +35,15 @@ NUM_FRAMES = 10
 class SelectExecutorTest(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        # return
         CatalogManager().reset()
         create_sample_video(NUM_FRAMES)
         load_query = """LOAD DATA INFILE 'dummy.avi' INTO MyVideo;"""
         execute_query_fetch_all(load_query)
         load_inbuilt_udfs()
-        cls.table1 = create_table("table1", 100, 3)
-        cls.table2 = create_table("table2", 500, 3)
-        cls.table3 = create_table("table3", 1000, 3)
+        # cls.table1 = create_table("table1", 100, 3)
+        # cls.table2 = create_table("table2", 500, 3)
+        # cls.table3 = create_table("table3", 1000, 3)
 
     @classmethod
     def tearDownClass(cls):
@@ -169,7 +170,9 @@ class SelectExecutorTest(unittest.TestCase):
         select_query = "SELECT id, data FROM MyVideo WHERE id >= 2;"
         actual_batch = execute_query_fetch_all(select_query)
         actual_batch.sort()
-        expected_batch = list(create_dummy_batches(filters=range(2, NUM_FRAMES)))[0]
+        expected_batch = list(
+            create_dummy_batches(filters=range(2, NUM_FRAMES))
+        )[0]
         self.assertEqual(actual_batch, expected_batch)
 
         select_query = "SELECT id, data FROM MyVideo WHERE id >= 2 AND id < 5;"
@@ -217,7 +220,9 @@ class SelectExecutorTest(unittest.TestCase):
         actual_batch.sort()
         expected_batch = list(
             create_dummy_batches(
-                filters=[i for i in range(NUM_FRAMES) if i < 2 or i == 5 or i > 7]
+                filters=[
+                    i for i in range(NUM_FRAMES) if i < 2 or i == 5 or i > 7
+                ]
             )
         )[0]
         self.assertEqual(actual_batch, expected_batch)
@@ -226,7 +231,9 @@ class SelectExecutorTest(unittest.TestCase):
         select_query = "SELECT id,data FROM MyVideo ORDER BY id LIMIT 5;"
         actual_batch = execute_query_fetch_all(select_query)
         actual_batch.sort()
-        expected_batch = list(create_dummy_batches(num_frames=10, batch_size=5))
+        expected_batch = list(
+            create_dummy_batches(num_frames=10, batch_size=5)
+        )
 
         self.assertEqual(actual_batch.batch_size, expected_batch[0].batch_size)
         self.assertEqual(actual_batch, expected_batch[0])
@@ -236,7 +243,9 @@ class SelectExecutorTest(unittest.TestCase):
         actual_batch = execute_query_fetch_all(select_query)
         actual_batch.sort()
 
-        expected_batch = list(create_dummy_batches(filters=range(0, NUM_FRAMES, 7)))
+        expected_batch = list(
+            create_dummy_batches(filters=range(0, NUM_FRAMES, 7))
+        )
 
         self.assertEqual(actual_batch.batch_size, expected_batch[0].batch_size)
         # Since frames are fetched in random order, this test might be flaky
@@ -325,3 +334,16 @@ class SelectExecutorTest(unittest.TestCase):
                 expected_batch.sort_orderby(["table1.a0"]),
                 actual_batch.sort_orderby(["table1.a0"]),
             )
+
+    def test_udf_pull_up_rule(self):
+        query = """SELECT id FROM MyVideo WHERE id < 5 AND ['pedestrian', 'car'] <@ FastRCNNObjectDetector(data).labels;"""
+        print(query)
+        actual_batch = execute_query_fetch_all(query)
+        print(actual_batch)
+
+
+if __name__ == "__main__":
+    suite = unittest.TestSuite()
+    suite.addTest(SelectExecutorTest("test_udf_pull_up_rule"))
+    runner = unittest.TextTestRunner()
+    runner.run(suite)
