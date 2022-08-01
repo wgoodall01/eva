@@ -3,7 +3,7 @@
 [![Build Status](https://circleci.com/gh/georgia-tech-db/eva.svg?style=svg)](https://circleci.com/gh/georgia-tech-db/eva)
 [![Coverage Status](https://coveralls.io/repos/github/georgia-tech-db/eva/badge.svg?branch=master)](https://coveralls.io/github/georgia-tech-db/eva?branch=master)
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](https://opensource.org/licenses/Apache-2.0)
-[![Documentation Status](https://readthedocs.org/projects/exvian/badge/?version=latest)](https://evagatech.readthedocs.io/en/latest/index.html) [![Join the chat at https://gitter.im/georgia-tech-db/eva](https://badges.gitter.im/georgia-tech-db/eva.svg)](https://gitter.im/georgia-tech-db/eva?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+[![Documentation Status](https://readthedocs.org/projects/exvian/badge/?version=latest)](https://evagatech.readthedocs.io/en/latest/index.html) 
 
 ## What is EVA?
 
@@ -123,7 +123,7 @@ Documentation for EVA is located [here](https://evagatech.readthedocs.io/).
 
 ### Installation Instructions for Developers
 
-To install EVA from source, use a virtual environment and the pip package manager. EVA requires JAVA 8 for generating the parser.
+To install EVA from source, use a virtual environment and the pip package manager. EVA requires JAVA 8 for generating the parser. Detailed development guide is available [here](https://evagatech.readthedocs.io/en/latest/source/contribute/index.html).
 
 ```shell
 git clone https://github.com/georgia-tech-db/eva.git && cd eva
@@ -132,7 +132,7 @@ python3 -m venv env38                                # to create a virtual envir
 pip install --upgrade pip
 sudo -E apt install -y openjdk-8-jdk openjdk-8-jre   # to install JAVA
 sh script/antlr4/generate_parser.sh                  # to generate the EVA parser
-pip install .
+python -m pip install install -e .[dev]
 ```
 
 </p>
