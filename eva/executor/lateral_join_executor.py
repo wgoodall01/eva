@@ -41,4 +41,5 @@ class LateralJoinExecutor(AbstractExecutor):
                 result_batch = apply_predicate(result_batch, self.predicate)
                 result_batch = apply_project(result_batch, self.join_project)
                 if not result_batch.empty():
-                    return result_batch
+                    yield result_batch
+        yield from ()

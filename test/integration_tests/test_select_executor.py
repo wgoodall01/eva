@@ -338,15 +338,10 @@ class SelectExecutorTest(unittest.TestCase):
                 actual_batch.sort_orderby(["table1.a0"]),
             )
 
-    def test_udf_pull_up_rule(self):
-        query = """SELECT id FROM MyVideo WHERE id < 5 AND ['pedestrian', 'car'] <@ FastRCNNObjectDetector(data).labels;"""
-        print(query)
+    def test_aaudf_pull_up_rule(self):
+        query = """SELECT id FROM MyVideo 
+                    WHERE id < 5 
+                    AND ['pedestrian', 'car'] <@ FastRCNNObjectDetector(data).labels
+                    AND ['pedestrian', 'car'] <@ FastRCNNObjectDetector(data).labels;"""
         actual_batch = execute_query_fetch_all(query)
         print(actual_batch)
-
-
-if __name__ == "__main__":
-    suite = unittest.TestSuite()
-    suite.addTest(SelectExecutorTest("test_udf_pull_up_rule"))
-    runner = unittest.TextTestRunner()
-    runner.run(suite)

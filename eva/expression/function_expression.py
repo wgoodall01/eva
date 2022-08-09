@@ -17,9 +17,13 @@ from typing import Callable, List
 import pandas as pd
 
 from eva.catalog.models.udf_io import UdfIO
+from eva.catalog.models.udf import UdfMetadata
 from eva.constants import NO_GPU
 from eva.executor.execution_context import Context
-from eva.expression.abstract_expression import AbstractExpression, ExpressionType
+from eva.expression.abstract_expression import (
+    AbstractExpression,
+    ExpressionType,
+)
 from eva.models.storage.batch import Batch
 from eva.udfs.gpu_compatible import GPUCompatible
 
@@ -42,7 +46,9 @@ class FunctionExpression(AbstractExpression):
     `Select OD.labels FROM Video JOIN LATERAL ObjDetector AS OD;`
     """
 
-    def __init__(self, func: Callable, name: str, output=None, alias=None, **kwargs):
+    def __init__(
+        self, func: Callable, name: str, output=None, alias=None, **kwargs
+    ):
 
         super().__init__(ExpressionType.FUNCTION_EXPRESSION, **kwargs)
         self._context = Context()
@@ -52,6 +58,7 @@ class FunctionExpression(AbstractExpression):
         self.alias: str = alias
         self.output_col_aliases: List[str] = []
         self.output_objs: List[UdfIO] = []
+        self.udf_obj: UdfMetadata = None
 
     @property
     def name(self):
@@ -71,7 +78,9 @@ class FunctionExpression(AbstractExpression):
 
     def evaluate(self, batch: Batch, **kwargs):
         new_batch = batch
-        child_batches = [child.evaluate(batch, **kwargs) for child in self.children]
+        child_batches = [
+            child.evaluate(batch, **kwargs) for child in self.children
+        ]
         if len(child_batches):
             new_batch = Batch.merge_column_wise(child_batches)
 
@@ -100,11 +109,18 @@ class FunctionExpression(AbstractExpression):
             and self.output == other.output
             and self.alias == other.alias
             and self.output_col_aliases == other.output_col_aliases
-            and self.function == other.function
             and self.output_objs == other.output_objs
+            and self.udf_obj == other.udf_obj
         )
 
     def __hash__(self) -> int:
+        ## Potential Bug: Two Function Expresisons with identical attributes will have 
+        # different hash, because a unique copy of `self.function` object is assigned 
+        # to each expression. This can hurt in optimizer as there will be duplicate 
+        # expressions.
+        ## Fix: Remove self.function from the hash. Better fix can be done by handling
+        # it in binder by not creating multiple instance of the same function 
+        # expression.
         return hash(
             (
                 super().__hash__(),
@@ -112,7 +128,7 @@ class FunctionExpression(AbstractExpression):
                 self.output,
                 self.alias,
                 tuple(self.output_col_aliases),
-                self.function,
                 tuple(self.output_objs),
+                self.udf_obj
             )
         )

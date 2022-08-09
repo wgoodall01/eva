@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+import copy
 from typing import List, Tuple
 
 from eva.catalog.catalog_manager import CatalogManager
@@ -162,7 +163,9 @@ def extract_function_expressions(
     )
 
 
-def convert_function_expr_to_function_scan(predicate: AbstractExpression):
+def convert_predicate_containing_function_expr_to_function_scan(
+    predicate: AbstractExpression,
+):
     func_expr = None
     child_idx = -1
     if isinstance(predicate.children[0], FunctionExpression):
@@ -174,14 +177,59 @@ def convert_function_expr_to_function_scan(predicate: AbstractExpression):
 
     if child_idx == -1 or func_expr is None:
         logger.warning("Predicate does not contain Function Expression")
-        return None
+        return None, None
 
     func_scan = LogicalFunctionScan(func_expr)
     tuple_value_expr = function_expression_to_tuple_value_expression(func_expr)
     if tuple_value_expr:
         predicate.children[child_idx] = tuple_value_expr
-        new_filter = LogicalFilter(predicate)
-        new_filter.append_child(func_scan)
-        return new_filter
+        return func_scan, predicate
     else:
-        return None
+        return None, None
+
+
+def extract_function_exprs_from_projection(
+    project_list: List[AbstractExpression],
+) -> Tuple[List[FunctionExpression], List[AbstractExpression]]:
+    """Split the project_list into a list of function expressions and other projections
+
+    Args:
+        project_list (List[AbstractExpression]): input projection list
+
+    Returns:
+        Tuple[List[FunctionExpression], List[AbstractExpression]]: list of
+            function expressions and other projections
+    """
+    function_exprs = []
+    other_exprs = []
+    for expr in project_list:
+        if isinstance(expr, FunctionExpression):
+            function_exprs.append(expr)
+        else:
+            other_exprs.append(expr)
+
+    return (function_exprs, other_exprs)
+
+
+def convert_function_expr_to_function_scan(func_expr: FunctionExpression):
+    if not isinstance(func_expr, FunctionExpression):
+        logger.warn(f"Expected FunctionExpression, got {type(func_expr)}")
+        return None, None
+
+    # Do not copy any output column from the original Function Expression before
+    # converting to FunctionScan. FunctionScan is expected to generate all the columns.
+    new_func_expr = FunctionExpression(
+        func=func_expr.function,
+        name=func_expr.name,
+        alias=func_expr.alias,
+        children=func_expr.children,
+    )
+    new_func_expr.udf_obj = func_expr.udf_obj
+    func_scan = LogicalFunctionScan(new_func_expr)
+
+    tuple_value_expr = function_expression_to_tuple_value_expression(func_expr)
+    if tuple_value_expr:
+        return func_scan, tuple_value_expr
+    else:
+        logger.warn(f"Failed to convert {func_expr} to TupleValueExpression")
+        return None, None

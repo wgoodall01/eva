@@ -14,6 +14,7 @@
 # limitations under the License.
 """Abstract class for all the join planners
 """
+from abc import abstractmethod
 from eva.expression.abstract_expression import AbstractExpression
 from eva.parser.types import JoinType
 from eva.planner.abstract_plan import AbstractPlan
@@ -47,6 +48,12 @@ class AbstractJoin(AbstractPlan):
     @property
     def join_predicate(self) -> AbstractExpression:
         return self._join_predicate
-
+    
+    @abstractmethod
     def __hash__(self) -> int:
         return hash((super().__hash__(), self.join_type, self.join_predicate))
+
+    def stringify(self, level=0):
+        print("\t" * level + type(self).__name__)
+        for child in self.children:
+            child.stringify(level + 1)

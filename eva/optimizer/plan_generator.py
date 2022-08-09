@@ -56,26 +56,25 @@ class PlanGenerator:
         root_expr = memo.groups[root_grp_id].logical_exprs[0]
 
         # TopDown Rewrite
-        optimizer_context.task_stack.push(
-            TopDownRewrite(root_expr, RulesManager().rewrite_rules, optimizer_context)
-        )
-        self.execute_task_stack(optimizer_context.task_stack)
-        print(optimizer_context.memo.get_all_logical_plans(root_grp_id))
+        # optimizer_context.task_stack.push(
+        #     TopDownRewrite(root_expr, RulesManager().rewrite_rules, optimizer_context)
+        # )
+        # self.execute_task_stack(optimizer_context.task_stack)
         # BottomUp Rewrite
         root_expr = memo.groups[root_grp_id].logical_exprs[0]
         optimizer_context.task_stack.push(
             BottomUpRewrite(root_expr, RulesManager().rewrite_rules, optimizer_context)
         )
         self.execute_task_stack(optimizer_context.task_stack)
-        # print(optimizer_context.memo.get_all_logical_plans(root_grp_id))
-
+        
         # Optimize Expression (logical -> physical transformation)
         root_group = memo.get_group_by_id(root_grp_id)
         optimizer_context.task_stack.push(OptimizeGroup(root_group, optimizer_context))
         self.execute_task_stack(optimizer_context.task_stack)
-
+        # print(memo.get_all_logical_plans(root_grp_id)[0].stringify())
         # Build Optimal Tree
         optimal_plan = self.build_optimal_physical_plan(root_grp_id, optimizer_context)
+        print(optimal_plan.stringify())
         return optimal_plan
 
     def build(self, logical_plan: Operator):

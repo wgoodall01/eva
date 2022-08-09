@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from collections import deque
 import copy
 import itertools
 from typing import Dict, List
@@ -106,20 +107,43 @@ class Memo:
         group.clear_grp_exprs()
 
     def add_group_expr(
-        self, expr: GroupExpression, group_id: int = UNDEFINED_GROUP_ID
+        self,
+        expr: GroupExpression,
+        group_id: int = UNDEFINED_GROUP_ID,
+        check_duplicate: bool = True,
     ) -> GroupExpression:
-        """
-        Add an expression into the memo.
-        If expr exists, we return it.
-        If group_id is not specified, creates a new group
-        Otherwise, inserts the expr into specified group.
-        """
-        # check duplicate expression
-        duplicate_expr = self.find_duplicate_expr(expr)
-        if duplicate_expr is not None:
-            return duplicate_expr
+        """Add group expression to a group.
 
-        # did not find a dulpicate expression
+        If the `group_id` is specified, it adds the expression to the corresponding
+        group. However, if group_id is not specified, it creates a new group.
+        If `check_duplicate` is set to True, the function checks for a duplicate
+        expresison in the memo before creating a new group.
+        The function raises error if the caller provides a valid `group_id` and  sets
+        `check_duplicate = True`.
+        Args:
+            expr (GroupExpression): group expresison to be added
+            group_id (int, optional): group id of the group, the caller wants to add
+            the expression. Defaults to UNDEFINED_GROUP_ID.
+            check_duplicate (bool, optional): decides if caller wants to check for
+            duplicate. Defaults to True.
+
+        Returns:
+            GroupExpression: The group expression with the correct group_id
+        Raises:
+            RuntimeError: if caller passes valid group_id and sets check_duplicate to
+            True
+        """
+        if group_id != UNDEFINED_GROUP_ID and check_duplicate:
+            err_msg = "Both group_id and check_duplicate are set"
+            logger.error(err_msg)
+            raise RuntimeError(err_msg)
+
+        # check duplicate expression
+        if check_duplicate:
+            duplicate_expr = self.find_duplicate_expr(expr)
+            if duplicate_expr is not None:
+                return duplicate_expr
+
         expr.group_id = group_id
 
         if expr.group_id == UNDEFINED_GROUP_ID:
@@ -129,10 +153,8 @@ class Memo:
 
         assert (
             expr.group_id is not UNDEFINED_GROUP_ID
-        ), """Expr
-                                                        should have a
-                                                        valid group
-                                                        id"""
+        ), "Expr should have a valid group id"
+
         return expr
 
     def get_all_logical_plans(self, group_id):

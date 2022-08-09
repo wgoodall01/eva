@@ -12,6 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+from abc import abstractmethod
 from enum import IntEnum, auto
 from pathlib import Path
 from typing import List
@@ -52,6 +53,7 @@ class OperatorType(IntEnum):
     LOGICAL_CREATE_MATERIALIZED_VIEW = auto()
     LOGICAL_SHOW = auto()
     LOGICALDROPUDF = auto()
+    LOGICAL_APPLY = auto()
     LOGICALDELIMITER = auto()
 
 
@@ -84,6 +86,11 @@ class Operator:
     def clear_children(self):
         self.children = []
 
+    def stringify(self, level=0):
+        print("\t" * level + type(self).__name__)
+        for child in self.children:
+            child.stringify(level + 1)
+
     def __str__(self) -> str:
         return "%s[%s](%s)" % (
             type(self).__name__,
@@ -107,6 +114,7 @@ class Operator:
     def is_logical(self):
         return self._opr_type < OperatorType.LOGICALDELIMITER
 
+    @abstractmethod
     def __hash__(self) -> int:
         return hash((self.opr_type, tuple(self.children)))
 
@@ -215,7 +223,9 @@ class LogicalQueryDerivedGet(Operator):
         target_list: List[AbstractExpression] = None,
         children: List = None,
     ):
-        super().__init__(OperatorType.LOGICALQUERYDERIVEDGET, children=children)
+        super().__init__(
+            OperatorType.LOGICALQUERYDERIVEDGET, children=children
+        )
         self._alias = alias
         self.predicate = predicate
         self.target_list = target_list or []
@@ -237,7 +247,12 @@ class LogicalQueryDerivedGet(Operator):
 
     def __hash__(self) -> int:
         return hash(
-            (super().__hash__(), self.alias, self.predicate, tuple(self.target_list))
+            (
+                super().__hash__(),
+                self.alias,
+                self.predicate,
+                tuple(self.target_list),
+            )
         )
 
 
@@ -299,7 +314,9 @@ class LogicalOrderBy(Operator):
 
 
 class LogicalLimit(Operator):
-    def __init__(self, limit_count: ConstantValueExpression, children: List = None):
+    def __init__(
+        self, limit_count: ConstantValueExpression, children: List = None
+    ):
         super().__init__(OperatorType.LOGICALLIMIT, children)
         self._limit_count = limit_count
 
@@ -318,7 +335,9 @@ class LogicalLimit(Operator):
 
 
 class LogicalSample(Operator):
-    def __init__(self, sample_freq: ConstantValueExpression, children: List = None):
+    def __init__(
+        self, sample_freq: ConstantValueExpression, children: List = None
+    ):
         super().__init__(OperatorType.LOGICALSAMPLE, children)
         self._sample_freq = sample_freq
 
@@ -476,7 +495,9 @@ class LogicalRename(Operator):
         new_name {TableInfo}: [new name for the old table]
     """
 
-    def __init__(self, old_table_ref: TableRef, new_name: TableInfo, children=None):
+    def __init__(
+        self, old_table_ref: TableRef, new_name: TableInfo, children=None
+    ):
         super().__init__(OperatorType.LOGICALRENAME, children)
         self._new_name = new_name
         self._old_table_ref = old_table_ref
@@ -508,7 +529,9 @@ class LogicalDrop(Operator):
     Logical node for drop table operations
     """
 
-    def __init__(self, table_refs: List[TableRef], if_exists: bool, children=None):
+    def __init__(
+        self, table_refs: List[TableRef], if_exists: bool, children=None
+    ):
         super().__init__(OperatorType.LOGICALDROP, children)
         self._table_refs = table_refs
         self._if_exists = if_exists
@@ -532,7 +555,9 @@ class LogicalDrop(Operator):
         )
 
     def __hash__(self) -> int:
-        return hash((super().__hash__(), tuple(self._table_refs), self._if_exists))
+        return hash(
+            (super().__hash__(), tuple(self._table_refs), self._if_exists)
+        )
 
 
 class LogicalCreateUDF(Operator):
@@ -773,7 +798,9 @@ class LogicalUpload(Operator):
         )
 
     def __hash__(self) -> int:
-        return hash((super().__hash__(), self.path, self.path, self.video_blob))
+        return hash(
+            (super().__hash__(), self.path, self.path, self.video_blob)
+        )
 
 
 class LogicalFunctionScan(Operator):
@@ -912,7 +939,9 @@ class LogicalCreateMaterializedView(Operator):
         if_not_exists: bool = False,
         children=None,
     ):
-        super().__init__(OperatorType.LOGICAL_CREATE_MATERIALIZED_VIEW, children)
+        super().__init__(
+            OperatorType.LOGICAL_CREATE_MATERIALIZED_VIEW, children
+        )
         self._view = view
         self._col_list = col_list
         self._if_not_exists = if_not_exists
@@ -942,7 +971,12 @@ class LogicalCreateMaterializedView(Operator):
 
     def __hash__(self) -> int:
         return hash(
-            (super().__hash__(), self.view, tuple(self.col_list), self.if_not_exists)
+            (
+                super().__hash__(),
+                self.view,
+                tuple(self.col_list),
+                self.if_not_exists,
+            )
         )
 
 
@@ -963,3 +997,69 @@ class LogicalShow(Operator):
 
     def __hash__(self) -> int:
         return hash((super().__hash__(), self.show_type))
+
+
+class LogicalApply(Operator):
+    """Logical node for cross apply operators.
+
+       This node is reserved for pulling function expressions from the predicates and
+       selection list.
+    Attributes:
+        join_predicate: AbstractExpression
+            condition/predicate expression used to join the tables
+    """
+
+    def __init__(
+        self,
+        join_predicate: AbstractExpression = None,
+        children: List = None,
+    ):
+        super().__init__(OperatorType.LOGICAL_APPLY, children)
+        self._join_type = JoinType.LATERAL_JOIN
+        self._join_predicate = join_predicate
+        self._join_project = []
+
+    @property
+    def join_type(self):
+        return self._join_type
+
+    @property
+    def join_predicate(self):
+        return self._join_predicate
+
+    @join_predicate.setter
+    def join_predicate(self, predicate):
+        self._join_predicate = predicate
+
+    @property
+    def join_project(self):
+        return self._join_project
+
+    @join_project.setter
+    def join_project(self, join_project):
+        self._target_list = join_project
+
+    def lhs(self):
+        return self.children[0]
+
+    def rhs(self):
+        return self.children[1]
+
+    def __eq__(self, other):
+        is_subtree_equal = super().__eq__(other)
+        if not isinstance(other, LogicalApply):
+            return False
+        return (
+            is_subtree_equal
+            and self.join_predicate == other.join_predicate
+            and self.join_project == other.join_project
+        )
+
+    def __hash__(self) -> int:
+        return hash(
+            (
+                super().__hash__(),
+                self.join_predicate,
+                tuple(self.join_project),
+            )
+        )

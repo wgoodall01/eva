@@ -73,34 +73,46 @@ class TopDownRewrite(OptimizerTask):
     def execute(self):
         valid_rules = []
         for rule in self.rule_set:
-            if not self.root_expr.is_rule_explored(rule.rule_type) and rule.top_match(
-                self.root_expr.opr
-            ):
+            if not self.root_expr.is_rule_explored(
+                rule.rule_type
+            ) and rule.top_match(self.root_expr.opr):
                 valid_rules.append(rule)
 
         # sort the rules by promise
         valid_rules = sorted(valid_rules, key=lambda x: x.promise())
         for rule in valid_rules:
-            binder = Binder(self.root_expr, rule.pattern, self.optimizer_context.memo)
+            binder = Binder(
+                self.root_expr, rule.pattern, self.optimizer_context.memo
+            )
             for match in iter(binder):
                 if not rule.check(match, self.optimizer_context):
                     continue
                 logger.info(
-                    "In TopDown, Rule {} matched for {}".format(rule, self.root_expr)
+                    "In TopDown, Rule {} matched for {}".format(
+                        rule, self.root_expr
+                    )
                 )
                 after = rule.apply(match, self.optimizer_context)
                 new_expr = self.optimizer_context.replace_expression(
                     after, self.root_expr.group_id
                 )
                 self.optimizer_context.task_stack.push(
-                    TopDownRewrite(new_expr, self.rule_set, self.optimizer_context)
+                    TopDownRewrite(
+                        new_expr, self.rule_set, self.optimizer_context
+                    )
                 )
-
-                self.root_expr.mark_rule_explored(rule.rule_type)
+                # In case a rule replaces the root_expr, 
+                # we cannot continue as the root_expr is modified
+                return
+            self.root_expr.mark_rule_explored(rule.rule_type)
         for child in self.root_expr.children:
-            child_expr = self.optimizer_context.memo.groups[child].logical_exprs[0]
+            child_expr = self.optimizer_context.memo.groups[
+                child
+            ].logical_exprs[0]
             self.optimizer_context.task_stack.push(
-                TopDownRewrite(child_expr, self.rule_set, self.optimizer_context)
+                TopDownRewrite(
+                    child_expr, self.rule_set, self.optimizer_context
+                )
             )
 
 
@@ -112,7 +124,9 @@ class BottomUpRewrite(OptimizerTask):
         optimizer_context: OptimizerContext,
         children_explored=False,
     ):
-        super().__init__(optimizer_context, OptimizerTaskType.BOTTOM_UP_REWRITE)
+        super().__init__(
+            optimizer_context, OptimizerTaskType.BOTTOM_UP_REWRITE
+        )
         self._children_explored = children_explored
         self.root_expr = root_expr
         self.rule_set = rule_set
@@ -125,27 +139,35 @@ class BottomUpRewrite(OptimizerTask):
                 )
             )
             for child in self.root_expr.children:
-                child_expr = self.optimizer_context.memo.groups[child].logical_exprs[0]
+                child_expr = self.optimizer_context.memo.groups[
+                    child
+                ].logical_exprs[0]
                 self.optimizer_context.task_stack.push(
-                    BottomUpRewrite(child_expr, self.rule_set, self.optimizer_context)
+                    BottomUpRewrite(
+                        child_expr, self.rule_set, self.optimizer_context
+                    )
                 )
             return
         valid_rules = []
         for rule in self.rule_set:
-            if not self.root_expr.is_rule_explored(rule.rule_type) and rule.top_match(
-                self.root_expr.opr
-            ):
+            if not self.root_expr.is_rule_explored(
+                rule.rule_type
+            ) and rule.top_match(self.root_expr.opr):
                 valid_rules.append(rule)
 
         # sort the rules by promise
         sorted(valid_rules, key=lambda x: x.promise())
         for rule in valid_rules:
-            binder = Binder(self.root_expr, rule.pattern, self.optimizer_context.memo)
+            binder = Binder(
+                self.root_expr, rule.pattern, self.optimizer_context.memo
+            )
             for match in iter(binder):
                 if not rule.check(match, self.optimizer_context):
                     continue
                 logger.info(
-                    "In BottomUp, Rule {} matched for {}".format(rule, self.root_expr)
+                    "In BottomUp, Rule {} matched for {}".format(
+                        rule, self.root_expr
+                    )
                 )
                 after = rule.apply(match, self.optimizer_context)
                 new_expr = self.optimizer_context.replace_expression(
@@ -153,8 +175,12 @@ class BottomUpRewrite(OptimizerTask):
                 )
                 logger.info("After rewiting {}".format(self.root_expr))
                 self.optimizer_context.task_stack.push(
-                    BottomUpRewrite(new_expr, self.rule_set, self.optimizer_context)
+                    BottomUpRewrite(
+                        new_expr, self.rule_set, self.optimizer_context
+                    )
                 )
+                # Bug fix: In case a rule replaces the root_expr, we cannot continue as the root_expr is modified
+                return
             self.root_expr.mark_rule_explored(rule.rule_type)
 
 
@@ -167,7 +193,9 @@ class OptimizeExpression(OptimizerTask):
     ):
         self.root_expr = root_expr
         self.explore = explore
-        super().__init__(optimizer_context, OptimizerTaskType.OPTIMIZE_EXPRESSION)
+        super().__init__(
+            optimizer_context, OptimizerTaskType.OPTIMIZE_EXPRESSION
+        )
 
     def execute(self):
         all_rules = RulesManager().logical_rules
@@ -185,14 +213,18 @@ class OptimizeExpression(OptimizerTask):
         for rule in valid_rules:
             # apply the rule
             self.optimizer_context.task_stack.push(
-                ApplyRule(rule, self.root_expr, self.optimizer_context, self.explore)
+                ApplyRule(
+                    rule, self.root_expr, self.optimizer_context, self.explore
+                )
             )
 
             # explore the input group if necessary
             for idx, child in enumerate(rule.pattern.children):
                 if len(child.children):
                     child_grp_id = self.root_expr.children[idx]
-                    group = self.optimizer_context.memo.get_group_by_id(child_grp_id)
+                    group = self.optimizer_context.memo.get_group_by_id(
+                        child_grp_id
+                    )
                     self.optimizer_context.task_stack.push(
                         ExploreGroup(group, self.optimizer_context)
                     )
@@ -217,7 +249,9 @@ class ApplyRule(OptimizerTask):
         # return if already explored
         if self.root_expr.is_rule_explored(self.rule.rule_type):
             return
-        binder = Binder(self.root_expr, self.rule.pattern, self.optimizer_context.memo)
+        binder = Binder(
+            self.root_expr, self.rule.pattern, self.optimizer_context.memo
+        )
         for match in iter(binder):
             if not self.rule.check(match, self.optimizer_context):
                 continue
@@ -229,7 +263,9 @@ class ApplyRule(OptimizerTask):
             if new_expr.is_logical():
                 # optimize expressions
                 self.optimizer_context.task_stack.push(
-                    OptimizeExpression(new_expr, self.optimizer_context, self.explore)
+                    OptimizeExpression(
+                        new_expr, self.optimizer_context, self.explore
+                    )
                 )
             else:
                 # cost the physical expressions
@@ -264,7 +300,9 @@ class OptimizeGroup(OptimizerTask):
 
 
 class OptimizeInputs(OptimizerTask):
-    def __init__(self, root_expr: GroupExpression, optimizer_context: OptimizerContext):
+    def __init__(
+        self, root_expr: GroupExpression, optimizer_context: OptimizerContext
+    ):
         self.root_expr = root_expr
         super().__init__(optimizer_context, OptimizerTaskType.OPTIMIZE_INPUTS)
 
@@ -285,7 +323,9 @@ class OptimizeInputs(OptimizerTask):
                 )
                 return
 
-        cost += self.optimizer_context.cost_model.calculate_cost(self.root_expr)
+        cost += self.optimizer_context.cost_model.calculate_cost(
+            self.root_expr
+        )
         grp.add_expr_cost(self.root_expr, PropertyType.DEFAULT, cost)
 
 

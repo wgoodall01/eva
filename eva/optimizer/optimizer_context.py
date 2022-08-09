@@ -82,17 +82,33 @@ class OptimizerContext:
         """
         Removes all the expressions from the specified group and
         create a new expression. This is called by rewrite rules. The
-        new expr gets assigned a new group id
+        new expr is added to the provided group_id.
         """
         self.memo.erase_group(group_id)
         new_expr = self._xform_opr_to_group_expr(opr)
-        new_expr = self.memo.add_group_expr(new_expr, group_id)
+        # It does not check for duplicates as the caller expect to always add the
+        # expression to the group.
+        new_expr = self.memo.add_group_expr(
+            new_expr, group_id, check_duplicate=False
+        )
         return new_expr
 
-    def add_opr_to_group(self, opr: Operator, group_id: int = UNDEFINED_GROUP_ID):
+    def add_opr_to_group(
+        self, opr: Operator, group_id: int = UNDEFINED_GROUP_ID
+    ):
         """
         Convert opertator to group_expression and add to the group
         """
         grp_expr = self._xform_opr_to_group_expr(opr)
-        grp_expr = self.memo.add_group_expr(grp_expr, group_id)
+        if group_id is not UNDEFINED_GROUP_ID:
+            # Do not check for duplicates, as the caller expects the callee to always
+            # add an expr to the corresponding group
+            grp_expr = self.memo.add_group_expr(
+                grp_expr, group_id, check_duplicate=False
+            )
+        else:
+            # Caller did not provide any group_id so check for duplicates
+            grp_expr = self.memo.add_group_expr(
+                grp_expr, group_id, check_duplicate=True
+            )
         return grp_expr

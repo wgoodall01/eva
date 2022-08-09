@@ -186,7 +186,7 @@ class StatementBinder:
             "UDF with name {} does not exist in the catalog. Please "
             "create the UDF using CREATE UDF command".format(node.name)
         )
-
+        node.udf_obj = udf_obj
         output_objs = self._catalog.get_udf_outputs(udf_obj)
         if node.output:
             for obj in output_objs:

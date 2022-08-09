@@ -33,3 +33,6 @@ class FunctionScanPlan(AbstractPlan):
     @property
     def func_expr(self):
         return self._func_expr
+
+    def __hash__(self) -> int:
+        return hash((super().__hash__(), self._func_expr))

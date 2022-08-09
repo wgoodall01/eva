@@ -30,10 +30,11 @@ class ProjectExecutor(AbstractExecutor):
     def validate(self):
         pass
 
-    def exec(self) -> Iterator[Batch]:
+    def exec(self, *args, **kwargs) -> Iterator[Batch]:
         child_executor = self.children[0]
         for batch in child_executor.exec():
             batch = apply_project(batch, self.target_list)
 
             if not batch.empty():
                 yield batch
+        yield from []

@@ -53,3 +53,5 @@ class SequentialScanExecutor(AbstractExecutor):
 
             if not batch.empty():
                 yield batch
+
+        yield from []

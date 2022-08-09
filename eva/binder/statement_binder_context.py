@@ -194,3 +194,4 @@ class StatementBinderContext:
             raise RuntimeError(err_msg)
 
         return alias_match, match_obj
+

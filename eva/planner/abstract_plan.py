@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-from abc import ABC
+from abc import ABC, abstractmethod
 from typing import List
 
 from eva.planner.types import PlanOprType
@@ -72,6 +72,7 @@ class AbstractPlan(ABC):
     def is_logical(self):
         return False
 
+    @abstractmethod
     def __hash__(self) -> int:
         return hash(self.opr_type)
 
@@ -85,3 +86,8 @@ class AbstractPlan(ABC):
             else:
                 setattr(result, k, v)
         return result
+
+    def stringify(self, level=0):
+        print("\t" * level + type(self).__name__)
+        for child in self.children:
+            child.stringify(level + 1)

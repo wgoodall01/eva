@@ -117,3 +117,36 @@ class UDFExecutorTest(unittest.TestCase):
         )[0]
         expected_batch.modify_column_alias("T")
         self.assertEqual(actual_batch, expected_batch)
+
+
+    def test_aaudf_pull_up_rule(self):
+        query = """SELECT id, DummyObjectDetector(data).label FROM MyVideo 
+                    WHERE id < 5 
+                    AND DummyObjectDetector(data).label = ['person']
+                    AND DummyObjectDetector(data).label <@ ['person', 'bicycle'];"""
+        actual_batch = execute_query_fetch_all(query)
+        expected = [
+            {"myvideo.id": i * 2, "dummyobjectdetector.label": np.array(["person"])}
+            for i in range(3)
+        ]
+        print(actual_batch.frames)
+        self.assertEqual(Batch(frames=pd.DataFrame(expected)), actual_batch)
+
+    def test_single(self):
+        select_query = "SELECT id,DummyObjectDetector(data) FROM MyVideo \
+            WHERE DummyObjectDetector(data).label = ['person'] ORDER BY id;"
+        actual_batch = execute_query_fetch_all(select_query)
+        expected = [
+            {"myvideo.id": i * 2, "dummyobjectdetector.label": np.array(["person"])}
+            for i in range(NUM_FRAMES // 2)
+        ]
+        expected_batch = Batch(frames=pd.DataFrame(expected))
+        self.assertEqual(actual_batch, expected_batch)
+
+
+if __name__ == "__main__":
+    unittest.main()
+    suite = unittest.TestSuite()
+    suite.addTest(UDFExecutorTest("test_aaasingle"))
+    runner = unittest.TextTestRunner()
+    runner.run(suite)

@@ -14,16 +14,21 @@
 # limitations under the License.
 from __future__ import annotations
 
+from eva.utils.logging_manager import logger
 from abc import ABC, abstractmethod
+import copy
 from enum import Flag, IntEnum, auto
 from typing import TYPE_CHECKING
 
 from eva.optimizer.optimizer_utils import (
     convert_function_expr_to_function_scan,
+    convert_predicate_containing_function_expr_to_function_scan,
     extract_equi_join_keys,
     extract_function_expressions,
+    extract_function_exprs_from_projection,
     extract_pushdown_predicate,
 )
+from eva.expression.expression_utils import conjuction_list_to_expression_tree
 from eva.optimizer.rules.pattern import Pattern
 from eva.parser.types import JoinType
 from eva.planner.create_mat_view_plan import CreateMaterializedViewPlan
@@ -38,6 +43,7 @@ if TYPE_CHECKING:
 from eva.configuration.configuration_manager import ConfigurationManager
 from eva.optimizer.operators import (
     Dummy,
+    LogicalApply,
     LogicalCreate,
     LogicalCreateMaterializedView,
     LogicalCreateUDF,
@@ -97,11 +103,13 @@ class RuleType(Flag):
     PUSHDOWN_PROJECT_THROUGH_SAMPLE = auto()
     EMBED_PROJECT_INTO_DERIVED_GET = auto()
     EMBED_PROJECT_INTO_GET = auto()
+    PULL_UDF_FROM_FILTER_TO_LOGICAL_APPLY = auto()
+    LOGICAL_MERGE_DUPLICATE_FUNCTION_SCAN = auto()
+    PULL_UDF_FROM_PROJECT_TO_CROSS_APPLY = auto()
     REWRITE_DELIMETER = auto()
 
     # TRANSFORMATION RULES (LOGICAL -> LOGICAL)
     LOGICAL_INNER_JOIN_COMMUTATIVITY = auto()
-    PULL_UDF_FROM_FILTER_TO_CROSS_APPLY = auto()
     MERGE_UDF_ACROSS_CROSS_APPLY = auto()
     REORDER_UDF_ACROSS_CROSS_APPLY = auto()
     TRANSFORMATION_DELIMETER = auto()
@@ -128,6 +136,7 @@ class RuleType(Flag):
     LOGICAL_PROJECT_TO_PHYSICAL = auto()
     LOGICAL_SHOW_TO_PHYSICAL = auto()
     LOGICAL_DROP_UDF_TO_PHYSICAL = auto()
+    LOGICAL_APPLY_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
     NUM_RULES = auto()
@@ -162,11 +171,11 @@ class Promise(IntEnum):
     LOGICAL_PROJECT_TO_PHYSICAL = auto()
     LOGICAL_SHOW_TO_PHYSICAL = auto()
     LOGICAL_DROP_UDF_TO_PHYSICAL = auto()
+    LOGICAL_APPLY_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
     # TRANSFORMATION RULES (LOGICAL -> LOGICAL)
     LOGICAL_INNER_JOIN_COMMUTATIVITY = auto()
-    PULL_UDF_FROM_FILTER_TO_CROSS_APPLY = auto()
 
     # REWRITE RULES
     EMBED_FILTER_INTO_GET = auto()
@@ -175,6 +184,9 @@ class Promise(IntEnum):
     EMBED_PROJECT_INTO_DERIVED_GET = auto()
     PUSHDOWN_FILTER_THROUGH_SAMPLE = auto()
     PUSHDOWN_PROJECT_THROUGH_SAMPLE = auto()
+    PULL_UDF_FROM_FILTER_TO_LOGICAL_APPLY = auto()
+    PULL_UDF_FROM_PROJECT_TO_CROSS_APPLY = auto()
+    LOGICAL_MERGE_DUPLICATE_FUNCTION_SCAN = auto()
 
 
 class Rule(ABC):
@@ -454,19 +466,35 @@ class LogicalInnerJoinCommutativity(Rule):
         return new_join
 
 
-class PullUDFFromFilterToCrossApply(Rule):
+class PullUDFFromFilterToLogicalApply(Rule):
+    """Pull the Function Expressions from the predicate and add as Function Scans.
+    The rule does not work if the function expression is in an OR clause
+    The original predicate using function expression is added as a
+    simple predicate on outputs of function expression.
+    
+                                           LogicalApply(pred=F2)
+        LogicalFilter                    /                    \
+                                 LogicalApply(pred=F1)      FunctionScan(F2)
+     (P AND F1 AND F2)  ->           /          \
+            |                 Filter(P)     FunctionScan(F1)
+            A                    /
+                               A
+    Ordering of F1 and F2 is arbitrary
+    """
+
     def __init__(self):
         pattern = Pattern(OperatorType.LOGICALFILTER)
         pattern.append_child(Pattern(OperatorType.DUMMY))
-        super().__init__(RuleType.PULL_UDF_FROM_FILTER_TO_CROSS_APPLY, pattern)
+        super().__init__(
+            RuleType.PULL_UDF_FROM_FILTER_TO_LOGICAL_APPLY, pattern
+        )
 
     def promise(self):
-        return Promise.PULL_UDF_FROM_FILTER_TO_CROSS_APPLY
+        return Promise.PULL_UDF_FROM_FILTER_TO_LOGICAL_APPLY
 
     def check(self, before: LogicalFilter, context: OptimizerContext):
         # filter should have atleast one UDF
         predicate = before.predicate
-
         function_exprs, _ = extract_function_expressions(predicate)
         if len(function_exprs):
             return True
@@ -474,18 +502,6 @@ class PullUDFFromFilterToCrossApply(Rule):
             return False
 
     def apply(self, before: LogicalFilter, context: OptimizerContext):
-        # Pull the Function Expressions from the predicate and add as Function Scans.
-        # The original predicate using function expression is added as a simple predicate on outputs of function expression.
-        #
-        #                                        LogicalApply
-        #     LogicalFilter                    /             \
-        #         |                      LogicalApply     Filter(F2)
-        #  (P AND F1 AND F2)  ->           /        \          \
-        #         |                 Filter(P)   Filter(F1)    FunctionScan(F1)
-        #         A                    /             \
-        #                            A            FunctionScan(F1)
-        # Ordering of F1 and F2 is arbitrary
-
         A: Operator = before.children[0]
         function_exprs, rem_predicate = extract_function_expressions(
             before.predicate
@@ -499,13 +515,126 @@ class PullUDFFromFilterToCrossApply(Rule):
             new_opr = A
 
         for expr in function_exprs:
-            function_scan = convert_function_expr_to_function_scan(expr)
-            join = LogicalJoin(JoinType.LATERAL_JOIN)
+            expr_copy = copy.deepcopy(expr)
+            (
+                function_scan,
+                pred,
+            ) = convert_predicate_containing_function_expr_to_function_scan(
+                expr_copy
+            )
+            join = LogicalApply(join_predicate=pred)
             join.append_child(new_opr)
             join.append_child(function_scan)
             new_opr = join
-            # new_opr = LogicalJoin(new_opr, function_scan)
 
+        return new_opr
+
+
+class PullUDFFromProjectionToLogicalApply(Rule):
+    """Pull the Function Expressions from the projection and add as Function Scans.                                        
+                                            LogicalProject
+                                             (P, f1, f2)
+                                                |
+        LogicalProject                    LogicalApply
+        (P, F1, F2)      ->              /            \
+            |                      LogicalApply        FunctionScan(F2)
+            A                       /          \
+                                   A     FunctionScan(F1)        
+    
+    Ordering of F1 and F2 is arbitrary
+    """
+
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICALPROJECT)
+        pattern.append_child(Pattern(OperatorType.DUMMY))
+        super().__init__(
+            RuleType.PULL_UDF_FROM_PROJECT_TO_CROSS_APPLY, pattern
+        )
+
+    def promise(self):
+        return Promise.PULL_UDF_FROM_PROJECT_TO_CROSS_APPLY
+
+    def check(self, before: LogicalProject, context: OptimizerContext):
+        # Projection list contains atleast one FunctionExpression
+        projections = before.target_list
+        function_exprs, _ = extract_function_exprs_from_projection(projections)
+        if len(function_exprs):
+            return True
+        else:
+            return False
+
+    def apply(self, before: LogicalApply, context: OptimizerContext):
+        projections = before.target_list
+        new_opr = before.children[0]
+        (
+            function_exprs,
+            remaining_exprs,
+        ) = extract_function_exprs_from_projection(projections)
+
+        for expr in function_exprs:
+            expr_copy = copy.deepcopy(expr)
+            (
+                function_scan,
+                tuple_value_expr,
+            ) = convert_function_expr_to_function_scan(expr_copy)
+            remaining_exprs.append(tuple_value_expr)
+            join = LogicalApply()
+            join.append_child(new_opr)
+            join.append_child(function_scan)
+            new_opr = join
+        project = LogicalProject(remaining_exprs)
+        project.append_child(new_opr)
+        return project
+
+
+class MergeDuplicateFunctionScan(Rule):
+    """
+    Merge two identical LogicalFunctionScan nodes. The logical apply nodes are
+    also merged, which the predicates associated with the LogicalApply node are
+    treated as two conjunction.
+
+              LogicalApply                        LogicalApply
+              /         \                         /         \
+      LogicalApply      FunctionScan(F1) ->      A        FunctionScan(F1)
+      /          \
+     A        FunctionScan(F1)
+    """
+
+    def __init__(self):
+        child_pattern = Pattern(OperatorType.LOGICAL_APPLY)
+        child_pattern.append_child(Pattern(OperatorType.DUMMY))
+        child_pattern.append_child(Pattern(OperatorType.LOGICALFUNCTIONSCAN))
+        pattern = Pattern(OperatorType.LOGICAL_APPLY)
+        pattern.append_child(child_pattern)
+        pattern.append_child(Pattern(OperatorType.LOGICALFUNCTIONSCAN))
+        super().__init__(
+            RuleType.LOGICAL_MERGE_DUPLICATE_FUNCTION_SCAN, pattern
+        )
+
+    def promise(self):
+        return Promise.LOGICAL_MERGE_DUPLICATE_FUNCTION_SCAN
+
+    def check(self, before: LogicalApply, context: OptimizerContext):
+        # both FunctionScan should be identical
+        func_scan_a = before.rhs()
+        func_scan_b = before.lhs().rhs()
+        return func_scan_a == func_scan_b
+
+    def apply(self, before: LogicalApply, context: OptimizerContext):
+        logger.warning("Merging Duplicate Function Scan")
+        A: Operator = before.lhs().lhs()
+        function_scan = before.rhs()
+        parent_pred = before.join_predicate
+        child_pred = before.lhs().join_predicate
+        if parent_pred is not None and child_pred is not None:
+            new_pred = conjuction_list_to_expression_tree(
+                [parent_pred, child_pred]
+            )
+        else:
+            new_pred = parent_pred or child_pred
+        new_opr = LogicalApply(join_predicate=new_pred)
+        new_opr.append_child(A)
+        new_opr.append_child(function_scan)
         return new_opr
 
 
@@ -821,17 +950,41 @@ class LogicalLateralJoinToPhysical(Rule):
     def __init__(self):
         pattern = Pattern(OperatorType.LOGICALJOIN)
         pattern.append_child(Pattern(OperatorType.DUMMY))
-        pattern.append_child(Pattern(OperatorType.LOGICALFUNCTIONSCAN))
+        pattern.append_child(Pattern(OperatorType.DUMMY))
         super().__init__(RuleType.LOGICAL_LATERAL_JOIN_TO_PHYSICAL, pattern)
 
     def promise(self):
         return Promise.LOGICAL_LATERAL_JOIN_TO_PHYSICAL
 
     def check(self, before: Operator, context: OptimizerContext):
-        assert before.join_type == JoinType.LATERAL_JOIN
-        return True
+        if before.join_type == JoinType.LATERAL_JOIN:
+            return True
+        return False
 
     def apply(self, join_node: LogicalJoin, context: OptimizerContext):
+        lateral_join_plan = LateralJoinPlan(join_node.join_predicate)
+        lateral_join_plan.join_project = join_node.join_project
+        lateral_join_plan.append_child(join_node.lhs())
+        lateral_join_plan.append_child(join_node.rhs())
+        return lateral_join_plan
+
+
+class LogicalApplyToPhysical(Rule):
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICAL_APPLY)
+        pattern.append_child(Pattern(OperatorType.DUMMY))
+        pattern.append_child(Pattern(OperatorType.DUMMY))
+        super().__init__(RuleType.LOGICAL_APPLY_TO_PHYSICAL, pattern)
+
+    def promise(self):
+        return Promise.LOGICAL_APPLY_TO_PHYSICAL
+
+    def check(self, before: Operator, context: OptimizerContext):
+        if before.join_type == JoinType.LATERAL_JOIN:
+            return True
+        return False
+
+    def apply(self, join_node: LogicalApply, context: OptimizerContext):
         lateral_join_plan = LateralJoinPlan(join_node.join_predicate)
         lateral_join_plan.join_project = join_node.join_project
         lateral_join_plan.append_child(join_node.lhs())
@@ -977,7 +1130,10 @@ class RulesManager:
         return cls._instance
 
     def __init__(self):
-        self._logical_rules = [LogicalInnerJoinCommutativity()]
+        self._logical_rules = [
+            LogicalInnerJoinCommutativity(),
+            # LogicalReorderCrossApply(),
+        ]
 
         self._rewrite_rules = [
             EmbedFilterIntoGet(),
@@ -986,7 +1142,9 @@ class RulesManager:
             EmbedProjectIntoGet(),
             # EmbedProjectIntoDerivedGet(),
             PushdownProjectThroughSample(),
-            PullUDFFromFilterToCrossApply()
+            PullUDFFromFilterToLogicalApply(),
+            PullUDFFromProjectionToLogicalApply(),
+            MergeDuplicateFunctionScan(),
         ]
 
         self._implementation_rules = [
@@ -1011,6 +1169,7 @@ class RulesManager:
             LogicalFilterToPhysical(),
             LogicalProjectToPhysical(),
             LogicalShowToPhysical(),
+            LogicalApplyToPhysical(),
         ]
         self._all_rules = (
             self._rewrite_rules
