@@ -27,6 +27,7 @@ from eva.optimizer.optimizer_utils import (
 from eva.optimizer.rules.pattern import Pattern
 from eva.parser.types import JoinType
 from eva.planner.create_mat_view_plan import CreateMaterializedViewPlan
+from eva.planner.explain_plan import ExplainPlan
 from eva.planner.hash_join_build_plan import HashJoinBuildPlan
 from eva.planner.predicate_plan import PredicatePlan
 from eva.planner.project_plan import ProjectPlan
@@ -58,6 +59,7 @@ from eva.optimizer.operators import (
     LogicalShow,
     LogicalUnion,
     LogicalUpload,
+    LogicalExplain,
     Operator,
     OperatorType,
 )
@@ -125,6 +127,7 @@ class RuleType(Flag):
     LOGICAL_PROJECT_TO_PHYSICAL = auto()
     LOGICAL_SHOW_TO_PHYSICAL = auto()
     LOGICAL_DROP_UDF_TO_PHYSICAL = auto()
+    LOGICAL_EXPLAIN_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
     NUM_RULES = auto()
@@ -159,6 +162,7 @@ class Promise(IntEnum):
     LOGICAL_PROJECT_TO_PHYSICAL = auto()
     LOGICAL_SHOW_TO_PHYSICAL = auto()
     LOGICAL_DROP_UDF_TO_PHYSICAL = auto()
+    LOGICAL_EXPLAIN_TO_PHYSICAL = auto()
     IMPLEMENTATION_DELIMETER = auto()
 
     # TRANSFORMATION RULES (LOGICAL -> LOGICAL)
@@ -959,6 +963,24 @@ class LogicalShowToPhysical(Rule):
         return after
 
 
+class LogicalExplainToPhysical(Rule):
+    def __init__(self):
+        pattern = Pattern(OperatorType.LOGICALEXPLAIN)
+        super().__init__(RuleType.LOGICAL_EXPLAIN_TO_PHYSICAL, pattern)
+
+    def promise(self):
+        return Promise.LOGICAL_EXPLAIN_TO_PHYSICAL
+
+    def check(self, grp_id: int, context: OptimizerContext):
+        return True
+
+    def apply(self, before: LogicalExplain, context: OptimizerContext):
+        after = ExplainPlan(before.explainable_opr)
+        for child in before.children:
+            after.append_child(child)
+        return after
+
+
 # IMPLEMENTATION RULES END
 ##############################################
 
@@ -1007,6 +1029,7 @@ class RulesManager:
             LogicalFilterToPhysical(),
             LogicalProjectToPhysical(),
             LogicalShowToPhysical(),
+            LogicalExplainToPhysical(),
         ]
         self._all_rules = (
             self._rewrite_rules + self._logical_rules + self._implementation_rules

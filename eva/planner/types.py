@@ -41,4 +41,5 @@ class PlanOprType(Enum):
     PROJECT = auto()
     SHOW_INFO = auto()
     DROP_UDF = auto()
+    EXPLAIN = auto()
     # add other types
