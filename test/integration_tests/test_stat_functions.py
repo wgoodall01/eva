@@ -33,8 +33,18 @@ class StatFunctionsTests(unittest.TestCase):
     def tearDown(self):
         file_remove("dummy.avi")
 
+    def test_should_compute_mean(self):
+        query = "SELECT Stat_Mean(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        self.assertAlmostEqual(batch.frames.values[0][0], 4.5)
+
     def test_should_compute_stdev(self):
         query = "SELECT Stat_Stdev(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        self.assertAlmostEqual(batch.frames.values[0][0], 2.8722813232690143)
+
+    def test_should_compute_stdev_samp(self):
+        query = "SELECT Stat_Stdev_Sample(id) FROM MyVideo;"
         batch = execute_query_fetch_all(query)
         self.assertAlmostEqual(batch.frames.values[0][0], 3.0276503540974917)
 
@@ -43,3 +53,9 @@ class StatFunctionsTests(unittest.TestCase):
         batch = execute_query_fetch_all(query)
         print(batch)
         self.assertAlmostEqual(batch.frames.values[0][0], 1)
+
+    def test_should_compute_covariance(self):
+        query = "SELECT Stat_Covariance(id, id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 9.166666666666666)

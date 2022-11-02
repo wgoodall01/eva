@@ -58,12 +58,42 @@ StatStdev_udf_query = """CREATE UDF
     EVA_INSTALLATION_DIR, NDARRAY_DIR
 )
 
+StatMean_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Mean
+            INPUT (Input_Array NDARRAY ANYTYPE)
+            OUTPUT (result_mean INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_mean.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
+StatStdevSample_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Stdev_Sample
+            INPUT (Input_Array NDARRAY ANYTYPE)
+            OUTPUT (result_stdev INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_stdev_sample.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
 StatCorrelation_udf_query = """CREATE UDF
             IF NOT EXISTS  Stat_Correlation
             INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
             OUTPUT (result_correlation INTEGER)
             TYPE NdarrayUDF
             IMPL "{}/udfs/{}/stat_correlation.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
+StatCovariance_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Covariance
+            INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
+            OUTPUT (result_covariance INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_covariance.py";
         """.format(
     EVA_INSTALLATION_DIR, NDARRAY_DIR
 )
@@ -113,7 +143,10 @@ def init_builtin_udfs(mode="debug"):
         DummyObjectDetector_udf_query,
         Fastrcnn_udf_query,
         StatCorrelation_udf_query,
+        StatCovariance_udf_query,
+        StatStdevSample_udf_query,
         StatStdev_udf_query,
+        StatMean_udf_query,
     ]
 
     for query in queries:

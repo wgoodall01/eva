@@ -18,7 +18,7 @@ import pandas as pd
 from eva.udfs.abstract.abstract_udf import AbstractUDF
 
 
-class Stat_Stdev(AbstractUDF):
+class Stat_Mean(AbstractUDF):
     @property
     def name(self) -> str:
         return "Stat_Stdev"
@@ -33,7 +33,7 @@ class Stat_Stdev(AbstractUDF):
 
         # Aggregate the dataset into a single-row frame.
         x = inp.iloc[:, 0].values
-        stdev = np.std(x)
+        stdev = np.mean(x)
 
         # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
-        return pd.DataFrame({"result_stdev": [stdev]})
+        return pd.DataFrame({"result_mean": [stdev]})
