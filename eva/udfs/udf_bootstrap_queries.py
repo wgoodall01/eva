@@ -48,6 +48,26 @@ ArrayCount_udf_query = """CREATE UDF
     EVA_INSTALLATION_DIR, NDARRAY_DIR
 )
 
+StatStdev_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Stdev
+            INPUT (Input_Array NDARRAY ANYTYPE)
+            OUTPUT (result_stdev INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_stdev.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
+StatCorrelation_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Correlation
+            INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
+            OUTPUT (result_correlation INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_correlation.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
 Crop_udf_query = """CREATE UDF IF NOT EXISTS Crop
                 INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM),
                         bboxes NDARRAY FLOAT32(ANYDIM, 4))
@@ -86,8 +106,15 @@ def init_builtin_udfs(mode="debug"):
     Arguments:
         mode (str): 'debug' or 'release'
     """
-    queries = [Fastrcnn_udf_query, ArrayCount_udf_query, Crop_udf_query]
-    queries.extend([DummyObjectDetector_udf_query, DummyMultiObjectDetector_udf_query])
+    queries = [
+        ArrayCount_udf_query,
+        Crop_udf_query,
+        DummyMultiObjectDetector_udf_query,
+        DummyObjectDetector_udf_query,
+        Fastrcnn_udf_query,
+        StatCorrelation_udf_query,
+        StatStdev_udf_query,
+    ]
 
     for query in queries:
         execute_query_fetch_all(query)
