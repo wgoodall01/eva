@@ -14,14 +14,15 @@
 # limitations under the License.
 import numpy as np
 import pandas as pd
+import scipy.stats.mstats
 
 from eva.udfs.abstract.abstract_udf import AbstractUDF
 
 
-class Stat_Stdev_Sample(AbstractUDF):
+class Stat_Geometric_Mean(AbstractUDF):
     @property
     def name(self) -> str:
-        return "Stat_Stdev_Sample"
+        return "Stat_Geometric_Mean"
 
     def setup(self):
         pass
@@ -33,7 +34,7 @@ class Stat_Stdev_Sample(AbstractUDF):
 
         # Aggregate the dataset into a single-row frame.
         x = inp.iloc[:, 0].values
-        stdev = np.std(x, ddof=1)
+        stdev = scipy.stats.mstats.gmean(x)
 
         # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
-        return pd.DataFrame({"result_stdev": [stdev]})
+        return pd.DataFrame({"result_mean": [stdev]})

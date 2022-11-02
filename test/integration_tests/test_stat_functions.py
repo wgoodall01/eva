@@ -38,6 +38,16 @@ class StatFunctionsTests(unittest.TestCase):
         batch = execute_query_fetch_all(query)
         self.assertAlmostEqual(batch.frames.values[0][0], 4.5)
 
+    def test_should_compute_geometric_mean(self):
+        query = "SELECT Stat_Geometric_Mean(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0)
+
+    def test_should_compute_harmonic_mean(self):
+        query = "SELECT Stat_Harmonic_Mean(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0)
+
     def test_should_compute_stdev(self):
         query = "SELECT Stat_Stdev(id) FROM MyVideo;"
         batch = execute_query_fetch_all(query)

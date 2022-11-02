@@ -68,6 +68,27 @@ StatMean_udf_query = """CREATE UDF
     EVA_INSTALLATION_DIR, NDARRAY_DIR
 )
 
+StatGeometricMean_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Geometric_Mean
+            INPUT (Input_Array NDARRAY ANYTYPE)
+            OUTPUT (result_mean INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_geometric_mean.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
+StatHarmonicMean_udf_query = """CREATE UDF
+            IF NOT EXISTS  Stat_Harmonic_Mean
+            INPUT (Input_Array NDARRAY ANYTYPE)
+            OUTPUT (result_mean INTEGER)
+            TYPE NdarrayUDF
+            IMPL "{}/udfs/{}/stat_harmonic_mean.py";
+        """.format(
+    EVA_INSTALLATION_DIR, NDARRAY_DIR
+)
+
+
 StatStdevSample_udf_query = """CREATE UDF
             IF NOT EXISTS  Stat_Stdev_Sample
             INPUT (Input_Array NDARRAY ANYTYPE)
@@ -147,6 +168,8 @@ def init_builtin_udfs(mode="debug"):
         StatStdevSample_udf_query,
         StatStdev_udf_query,
         StatMean_udf_query,
+        StatGeometricMean_udf_query,
+        StatHarmonicMean_udf_query,
     ]
 
     for query in queries:

@@ -21,7 +21,7 @@ from eva.udfs.abstract.abstract_udf import AbstractUDF
 class Stat_Mean(AbstractUDF):
     @property
     def name(self) -> str:
-        return "Stat_Stdev"
+        return "Stat_Mean"
 
     def setup(self):
         pass
