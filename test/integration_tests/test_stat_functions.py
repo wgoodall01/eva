@@ -76,3 +76,8 @@ class StatFunctionsTests(unittest.TestCase):
         batch = execute_query_fetch_all(query)
         print(batch)
         self.assertAlmostEqual(batch.frames.values[0][0], 0.5655849015373431)
+
+    def test_should_compute_linear_regression(self):
+        query = "SELECT linear_regression(id, id).slope FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        self.assertAlmostEqual(batch.frames.values[0][0], 1)

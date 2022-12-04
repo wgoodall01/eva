@@ -168,3 +168,30 @@ class percentile(AbstractUDF):
         percentile = scipy.stats.norm.cdf(zscore)
 
         return pd.DataFrame({"result": [percentile]})
+
+
+class linear_regression(AbstractUDF):
+    @property
+    def name(self) -> str:
+        return "linear_regression"
+
+    def setup(self):
+        pass
+
+    def forward(self, inp: pd.DataFrame) -> pd.DataFrame:
+        x = inp.iloc[:, 0].values
+        y = inp.iloc[:, 1].values
+
+        # Compute a scipt.stats.LinregressResult
+        regression = scipy.stats.linregress(x, y)
+
+        return pd.DataFrame(
+            {
+                "slope": [regression.slope],
+                "intercept": [regression.intercept],
+                "rvalue": [regression.rvalue],
+                "pvalue": [regression.pvalue],
+                "stderr": [regression.stderr],
+                "intercept_stderr": [regression.intercept_stderr],
+            }
+        )

@@ -78,11 +78,28 @@ for aggregation_name in [
         f"""
         CREATE UDF IF NOT EXISTS {aggregation_name}
         INPUT (Input_Array NDARRAY ANYTYPE) -- Permits any sequence of arguments to be passed
-        OUTPUT (result INTEGER)             -- Permits any result. FLOAT datatype is not implemented.
+        OUTPUT (result NDARRAY ANYTYPE)             -- Permits any result. FLOAT datatype is not implemented.
         TYPE NdarrayUDF
         IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/statistics_aggregations.py";
         """
     )
+
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS linear_regression
+    INPUT (Input_Array NDARRAY ANYTYPE) -- Permits any sequence of arguments to be passed
+    OUTPUT (
+        slope INTEGER,
+        intercept INTEGER,
+        rvalue INTEGER,
+        pvalue INTEGER,
+        stderr INTEGER,
+        intercept_stderr INTEGER
+    )
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/statistics_aggregations.py";
+    """
+)
 
 
 queries.append(
