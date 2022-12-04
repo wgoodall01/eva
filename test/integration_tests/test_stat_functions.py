@@ -64,3 +64,15 @@ class StatFunctionsTests(unittest.TestCase):
         batch = execute_query_fetch_all(query)
         print(batch)
         self.assertAlmostEqual(batch.frames.values[0][0], 9.166666666666666)
+
+    def test_should_compute_z_score(self):
+        query = "SELECT z_score(5, id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0.1651445647689541)
+
+    def test_should_compute_percentile(self):
+        query = "SELECT percentile(5, id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0.5655849015373431)

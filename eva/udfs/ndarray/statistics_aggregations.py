@@ -59,8 +59,6 @@ class covariance(AbstractUDF):
         cov_matrix = np.cov(x, y)
         cov = cov_matrix[0, 1]
 
-        # The name of this key must match the `OUTPUT ($key_name TYPE)`
-        # clause in the `CREATE UDF` statement.
         return pd.DataFrame({"result": [cov]})
 
 
@@ -77,7 +75,6 @@ class geometric_mean(AbstractUDF):
         x = inp.iloc[:, 0].values
         stdev = scipy.stats.mstats.gmean(x)
 
-        # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
         return pd.DataFrame({"result": [stdev]})
 
 
@@ -94,7 +91,6 @@ class harmonic_mean(AbstractUDF):
         x = inp.iloc[:, 0].values
         stdev = scipy.stats.hmean(x)
 
-        # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
         return pd.DataFrame({"result": [stdev]})
 
 
@@ -111,7 +107,6 @@ class stdev(AbstractUDF):
         x = inp.iloc[:, 0].values
         stdev = np.std(x)
 
-        # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
         return pd.DataFrame({"result": [stdev]})
 
 
@@ -128,5 +123,48 @@ class stdev_sample(AbstractUDF):
         x = inp.iloc[:, 0].values
         stdev = np.std(x, ddof=1)
 
-        # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
         return pd.DataFrame({"result": [stdev]})
+
+
+class z_score(AbstractUDF):
+    @property
+    def name(self) -> str:
+        return "z_score"
+
+    def setup(self):
+        pass
+
+    def forward(self, inp: pd.DataFrame) -> pd.DataFrame:
+        # Aggregate the dataset into a single-row frame.
+        value = inp.iloc[:, 0].values[0]
+        data = inp.iloc[:, 1].values
+
+        stdev = np.std(data, ddof=1)
+        mean = np.mean(data)
+
+        zscore = (value - mean) / stdev
+
+        return pd.DataFrame({"result": [zscore]})
+
+
+class percentile(AbstractUDF):
+    @property
+    def name(self) -> str:
+        return "percentile"
+
+    def setup(self):
+        pass
+
+    def forward(self, inp: pd.DataFrame) -> pd.DataFrame:
+        # Aggregate the dataset into a single-row frame.
+        value = inp.iloc[:, 0].values[0]
+        data = inp.iloc[:, 1].values
+
+        stdev = np.std(data, ddof=1)
+        mean = np.mean(data)
+
+        zscore = (value - mean) / stdev
+
+        percentile = scipy.stats.norm.cdf(zscore)
+
+        return pd.DataFrame({"result": [percentile]})

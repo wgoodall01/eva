@@ -57,7 +57,7 @@ for aggregation_name in ["min", "max", "count", "sum", "avg"]:
         f"""
         CREATE UDF IF NOT EXISTS {aggregation_name}
         INPUT (Input_Array NDARRAY ANYTYPE)
-        OUTPUT (result INTEGER)
+        OUTPUT (result INTEGER) -- Permits any result, floats included. FLOAT datatype is not implemented.
         TYPE NdarrayUDF
         IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/sql_aggregations.py";
         """
@@ -71,12 +71,14 @@ for aggregation_name in [
     "harmonic_mean",
     "stdev",
     "stdev_sample",
+    "z_score",
+    "percentile",
 ]:
     queries.append(
         f"""
         CREATE UDF IF NOT EXISTS {aggregation_name}
-        INPUT (Input_Array NDARRAY ANYTYPE)
-        OUTPUT (result INTEGER)
+        INPUT (Input_Array NDARRAY ANYTYPE) -- Permits any sequence of arguments to be passed
+        OUTPUT (result INTEGER)             -- Permits any result. FLOAT datatype is not implemented.
         TYPE NdarrayUDF
         IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/statistics_aggregations.py";
         """
