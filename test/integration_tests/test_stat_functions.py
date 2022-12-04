@@ -69,3 +69,21 @@ class StatFunctionsTests(unittest.TestCase):
         batch = execute_query_fetch_all(query)
         print(batch)
         self.assertAlmostEqual(batch.frames.values[0][0], 9.166666666666666)
+
+    def test_should_compute_min(self):
+        query = "SELECT Stat_Min(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0)
+
+    def test_should_compute_max(self):
+        query = "SELECT Stat_Max(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 9)
+
+    def test_should_compute_count(self):
+        query = "SELECT Stat_Count(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 10)

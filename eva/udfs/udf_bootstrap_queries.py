@@ -17,135 +17,170 @@ from eva.configuration.configuration_manager import ConfigurationManager
 from eva.server.command_handler import execute_query_fetch_all
 
 EVA_INSTALLATION_DIR = ConfigurationManager().get_value("core", "eva_installation_dir")
-NDARRAY_DIR = "ndarray"
 
-DummyObjectDetector_udf_query = """CREATE UDF IF NOT EXISTS DummyObjectDetector
-                  INPUT  (Frame_Array NDARRAY INT8(3, ANYDIM, ANYDIM))
-                  OUTPUT (label NDARRAY STR(1))
-                  TYPE  Classification
-                  IMPL  '{}/../test/util.py';
-        """.format(
-    EVA_INSTALLATION_DIR
+queries = []
+
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS DummyObjectDetector
+    INPUT  (Frame_Array NDARRAY INT8(3, ANYDIM, ANYDIM))
+    OUTPUT (label NDARRAY STR(1))
+    TYPE  Classification
+    IMPL  '{EVA_INSTALLATION_DIR}/../test/util.py';
+    """
 )
 
-DummyMultiObjectDetector_udf_query = """CREATE UDF
-                  IF NOT EXISTS  DummyMultiObjectDetector
-                  INPUT  (Frame_Array NDARRAY INT8(3, ANYDIM, ANYDIM))
-                  OUTPUT (labels NDARRAY STR(2))
-                  TYPE  Classification
-                  IMPL  '{}/../test/util.py';
-        """.format(
-    EVA_INSTALLATION_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS DummyMultiObjectDetector
+    INPUT  (Frame_Array NDARRAY INT8(3, ANYDIM, ANYDIM))
+    OUTPUT (labels NDARRAY STR(2))
+    TYPE  Classification
+    IMPL  '{EVA_INSTALLATION_DIR}/../test/util.py';
+    """
 )
 
-ArrayCount_udf_query = """CREATE UDF
-            IF NOT EXISTS  Array_Count
-            INPUT (Input_Array NDARRAY ANYTYPE, Search_Key ANYTYPE)
-            OUTPUT (key_count INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/array_count.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Array_Count
+    INPUT (Input_Array NDARRAY ANYTYPE, Search_Key ANYTYPE)
+    OUTPUT (key_count INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/array_count.py";
+    """
 )
 
-StatStdev_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Stdev
-            INPUT (Input_Array NDARRAY ANYTYPE)
-            OUTPUT (result_stdev INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_stdev.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Min
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_min INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_min.py";
+    """
+)
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Max
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_max INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_max.py";
+    """
 )
 
-StatMean_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Mean
-            INPUT (Input_Array NDARRAY ANYTYPE)
-            OUTPUT (result_mean INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_mean.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Sum
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_sum INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_sum.py";
+    """
 )
 
-StatGeometricMean_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Geometric_Mean
-            INPUT (Input_Array NDARRAY ANYTYPE)
-            OUTPUT (result_mean INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_geometric_mean.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Count
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_count INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_count.py";
+    """
 )
 
-StatHarmonicMean_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Harmonic_Mean
-            INPUT (Input_Array NDARRAY ANYTYPE)
-            OUTPUT (result_mean INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_harmonic_mean.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Stdev
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_stdev INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_stdev.py";
+    """
+)
+
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Mean
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_mean INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_mean.py";
+    """
+)
+
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Geometric_Mean
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_mean INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_geometric_mean.py";
+    """
+)
+
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Harmonic_Mean
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_mean INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_harmonic_mean.py";
+    """
 )
 
 
-StatStdevSample_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Stdev_Sample
-            INPUT (Input_Array NDARRAY ANYTYPE)
-            OUTPUT (result_stdev INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_stdev_sample.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Stdev_Sample
+    INPUT (Input_Array NDARRAY ANYTYPE)
+    OUTPUT (result_stdev INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_stdev_sample.py";
+    """
 )
 
-StatCorrelation_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Correlation
-            INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
-            OUTPUT (result_correlation INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_correlation.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Correlation
+    INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
+    OUTPUT (result_correlation INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_correlation.py";
+    """
 )
 
-StatCovariance_udf_query = """CREATE UDF
-            IF NOT EXISTS  Stat_Covariance
-            INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
-            OUTPUT (result_covariance INTEGER)
-            TYPE NdarrayUDF
-            IMPL "{}/udfs/{}/stat_covariance.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Stat_Covariance
+    INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
+    OUTPUT (result_covariance INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_covariance.py";
+    """
 )
 
-Crop_udf_query = """CREATE UDF IF NOT EXISTS Crop
-                INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM),
-                        bboxes NDARRAY FLOAT32(ANYDIM, 4))
-                OUTPUT (Cropped_Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM))
-                TYPE  NdarrayUDF
-                IMPL  "{}/udfs/{}/crop.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS Crop
+    INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM),
+            bboxes NDARRAY FLOAT32(ANYDIM, 4))
+    OUTPUT (Cropped_Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM))
+    TYPE  NdarrayUDF
+    IMPL  "{EVA_INSTALLATION_DIR}/udfs/ndarray/crop.py";
+    """
 )
 
-Unnest_udf_query = """CREATE UDF IF NOT EXISTS Unnest
-                INPUT  (inp NDARRAY ANYTYPE)
-                OUTPUT (out ANYTYPE)
-                TYPE  NdarrayUDF
-                IMPL  "{}/udfs/{}/unnest.py";
-        """.format(
-    EVA_INSTALLATION_DIR, NDARRAY_DIR
-)
 
-Fastrcnn_udf_query = """CREATE UDF IF NOT EXISTS FastRCNNObjectDetector
-      INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM))
-      OUTPUT (labels NDARRAY STR(ANYDIM), bboxes NDARRAY FLOAT32(ANYDIM, 4),
-                scores NDARRAY FLOAT32(ANYDIM))
-      TYPE  Classification
-      IMPL  '{}/udfs/fastrcnn_object_detector.py';
-      """.format(
-    EVA_INSTALLATION_DIR
+queries.append(
+    f"""
+    CREATE UDF IF NOT EXISTS FastRCNNObjectDetector
+    INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM))
+    OUTPUT (labels NDARRAY STR(ANYDIM), bboxes NDARRAY FLOAT32(ANYDIM, 4),
+    scores NDARRAY FLOAT32(ANYDIM))
+    TYPE  Classification
+    IMPL '{EVA_INSTALLATION_DIR}/udfs/fastrcnn_object_detector.py';
+    """
 )
 
 
@@ -157,20 +192,6 @@ def init_builtin_udfs(mode="debug"):
     Arguments:
         mode (str): 'debug' or 'release'
     """
-    queries = [
-        ArrayCount_udf_query,
-        Crop_udf_query,
-        DummyMultiObjectDetector_udf_query,
-        DummyObjectDetector_udf_query,
-        Fastrcnn_udf_query,
-        StatCorrelation_udf_query,
-        StatCovariance_udf_query,
-        StatStdevSample_udf_query,
-        StatStdev_udf_query,
-        StatMean_udf_query,
-        StatGeometricMean_udf_query,
-        StatHarmonicMean_udf_query,
-    ]
 
     for query in queries:
         execute_query_fetch_all(query)

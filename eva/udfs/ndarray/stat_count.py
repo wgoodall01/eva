@@ -18,10 +18,10 @@ import pandas as pd
 from eva.udfs.abstract.abstract_udf import AbstractUDF
 
 
-class Stat_Covariance(AbstractUDF):
+class Stat_Count(AbstractUDF):
     @property
     def name(self) -> str:
-        return "Stat_Covariance"
+        return "Stat_Count"
 
     def setup(self):
         pass
@@ -31,14 +31,9 @@ class Stat_Covariance(AbstractUDF):
         It will return a series composed of the aggregated values of each column.
         """
 
-        # Get a separate series for each variable
+        # Aggregate the dataset into a single-row frame.
         x = inp.iloc[:, 0].values
-        y = inp.iloc[:, 1].values
+        value = len(x)
 
-        # Compute the covariance matrix, and get the covariance between the two inputs
-        cov_matrix = np.cov(x, y)
-        cov = cov_matrix[0, 1]
-
-        # The name of this key must match the `OUTPUT ($key_name TYPE)`
-        # clause in the `CREATE UDF` statement.
-        return pd.DataFrame({"result_covariance": [cov]})
+        # The name of this key must match the `OUTPUT ($key_name TYPE)` clause in the `CREATE UDF` statement.
+        return pd.DataFrame({"result_count": [value]})
