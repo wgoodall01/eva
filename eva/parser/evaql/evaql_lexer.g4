@@ -132,16 +132,6 @@ STR:                                 'STR';
 DATETIME:                            'DATETIME';
 ANYTYPE:                             'ANYTYPE';
 
-// Group function Keywords
-
-AVG:                                 'AVG';
-COUNT:                               'COUNT';
-MAX:                                 'MAX';
-MIN:                                 'MIN';
-STD:                                 'STD';
-SUM:                                 'SUM';
-FCOUNT: 						     'FCOUNT';
-
 // Keywords, but can be ID
 // Common Keywords, but can be ID
 

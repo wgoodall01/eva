@@ -50,115 +50,38 @@ queries.append(
     """
 )
 
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Min
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_min INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_min.py";
-    """
-)
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Max
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_max INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_max.py";
-    """
-)
 
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Sum
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_sum INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_sum.py";
-    """
-)
+# Add the builtin SQL aggregations.
+for aggregation_name in ["min", "max", "count", "sum", "avg"]:
+    queries.append(
+        f"""
+        CREATE UDF IF NOT EXISTS {aggregation_name}
+        INPUT (Input_Array NDARRAY ANYTYPE)
+        OUTPUT (result INTEGER)
+        TYPE NdarrayUDF
+        IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/sql_aggregations.py";
+        """
+    )
 
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Count
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_count INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_count.py";
-    """
-)
+# Add the statistics aggregations.
+for aggregation_name in [
+    "correlation",
+    "covariance",
+    "geometric_mean",
+    "harmonic_mean",
+    "stdev",
+    "stdev_sample",
+]:
+    queries.append(
+        f"""
+        CREATE UDF IF NOT EXISTS {aggregation_name}
+        INPUT (Input_Array NDARRAY ANYTYPE)
+        OUTPUT (result INTEGER)
+        TYPE NdarrayUDF
+        IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/statistics_aggregations.py";
+        """
+    )
 
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Stdev
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_stdev INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_stdev.py";
-    """
-)
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Mean
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_mean INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_mean.py";
-    """
-)
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Geometric_Mean
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_mean INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_geometric_mean.py";
-    """
-)
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Harmonic_Mean
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_mean INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_harmonic_mean.py";
-    """
-)
-
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Stdev_Sample
-    INPUT (Input_Array NDARRAY ANYTYPE)
-    OUTPUT (result_stdev INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_stdev_sample.py";
-    """
-)
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Correlation
-    INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
-    OUTPUT (result_correlation INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_correlation.py";
-    """
-)
-
-queries.append(
-    f"""
-    CREATE UDF IF NOT EXISTS Stat_Covariance
-    INPUT (Input_X NDARRAY ANYTYPE, Input_Y NDARRAY ANYTYPE)
-    OUTPUT (result_covariance INTEGER)
-    TYPE NdarrayUDF
-    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/stat_covariance.py";
-    """
-)
 
 queries.append(
     f"""

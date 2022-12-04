@@ -536,18 +536,10 @@ ifNotExists
 
 functionCall
     : udfFunction                                              #udfFunctionCall
-    | aggregateWindowedFunction                                #aggregateFunctionCall
     ;
 
 udfFunction
     : simpleId '(' functionArgs ')' dottedId?
-    ;
-
-
-aggregateWindowedFunction
-    : (AVG | MAX | MIN | SUM)
-      '(' aggregator=(ALL | DISTINCT)? functionArg ')'
-    | COUNT '(' (starArg='*' | aggregator=ALL? functionArg) ')'
     ;
 
 functionArgs

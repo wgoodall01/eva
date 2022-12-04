@@ -1,7 +1,6 @@
 # coding=utf-8
 # Copyright 2018-2022 EVA
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
@@ -33,34 +32,31 @@ class StatFunctionsTests(unittest.TestCase):
     def tearDown(self):
         file_remove("dummy.avi")
 
-    def test_should_compute_geometric_mean(self):
-        query = "SELECT geometric_mean(id) FROM MyVideo;"
+    def test_should_compute_avg(self):
+        query = "SELECT avg(id) FROM MyVideo;"
         batch = execute_query_fetch_all(query)
-        self.assertAlmostEqual(batch.frames.values[0][0], 0)
+        self.assertAlmostEqual(batch.frames.values[0][0], 4.5)
 
-    def test_should_compute_harmonic_mean(self):
-        query = "SELECT harmonic_mean(id) FROM MyVideo;"
-        batch = execute_query_fetch_all(query)
-        self.assertAlmostEqual(batch.frames.values[0][0], 0)
-
-    def test_should_compute_stdev(self):
-        query = "SELECT stdev(id) FROM MyVideo;"
-        batch = execute_query_fetch_all(query)
-        self.assertAlmostEqual(batch.frames.values[0][0], 2.8722813232690143)
-
-    def test_should_compute_stdev_samp(self):
-        query = "SELECT stdev_sample(id) FROM MyVideo;"
-        batch = execute_query_fetch_all(query)
-        self.assertAlmostEqual(batch.frames.values[0][0], 3.0276503540974917)
-
-    def test_should_compute_correlation(self):
-        query = "SELECT correlation(id, id) FROM MyVideo;"
+    def test_should_compute_min(self):
+        query = "SELECT min(id) FROM MyVideo;"
         batch = execute_query_fetch_all(query)
         print(batch)
-        self.assertAlmostEqual(batch.frames.values[0][0], 1)
+        self.assertAlmostEqual(batch.frames.values[0][0], 0)
 
-    def test_should_compute_covariance(self):
-        query = "SELECT covariance(id, id) FROM MyVideo;"
+    def test_should_compute_max(self):
+        query = "SELECT max(id) FROM MyVideo;"
         batch = execute_query_fetch_all(query)
         print(batch)
-        self.assertAlmostEqual(batch.frames.values[0][0], 9.166666666666666)
+        self.assertAlmostEqual(batch.frames.values[0][0], 9)
+
+    def test_should_compute_count(self):
+        query = "SELECT count(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 10)
+
+    def test_should_compute_sum(self):
+        query = "SELECT sum(id) FROM MyVideo;"
+        batch = execute_query_fetch_all(query)
+        print(batch)
+        self.assertAlmostEqual(batch.frames.values[0][0], 45)

@@ -15,7 +15,6 @@
 import unittest
 
 from eva.expression.abstract_expression import ExpressionType
-from eva.expression.aggregation_expression import AggregationExpression
 from eva.expression.comparison_expression import ComparisonExpression
 from eva.expression.constant_value_expression import ConstantValueExpression
 from eva.expression.function_expression import FunctionExpression
@@ -30,17 +29,11 @@ class ExpressionEvaluationTest(unittest.TestCase):
         columnName1 = TupleValueExpression(col_name="DATA")
         columnName2 = TupleValueExpression(col_name="DATA")
 
-        aggr_expr1 = AggregationExpression(
-            ExpressionType.AGGREGATION_AVG, None, columnName1
-        )
-        aggr_expr2 = AggregationExpression(
-            ExpressionType.AGGREGATION_AVG, None, columnName2
-        )
         cmpr_exp1 = ComparisonExpression(
-            ExpressionType.COMPARE_NEQ, aggr_expr1, const_exp1
+            ExpressionType.COMPARE_NEQ, columnName1, const_exp1
         )
         cmpr_exp2 = ComparisonExpression(
-            ExpressionType.COMPARE_NEQ, aggr_expr2, const_exp2
+            ExpressionType.COMPARE_NEQ, columnName2, const_exp2
         )
 
         self.assertEqual(cmpr_exp1, cmpr_exp2)
@@ -53,15 +46,10 @@ class ExpressionEvaluationTest(unittest.TestCase):
             ExpressionType.COMPARE_NEQ, const_exp1, const_exp2
         )
         tuple_expr = TupleValueExpression(col_name="id")
-        aggr_expr = AggregationExpression(
-            ExpressionType.AGGREGATION_MAX, None, tuple_expr
-        )
         logical_expr = LogicalExpression(ExpressionType.LOGICAL_OR, cmpr_exp, cmpr_exp)
 
         self.assertNotEqual(const_exp1, const_exp2)
         self.assertNotEqual(cmpr_exp, const_exp1)
         self.assertNotEqual(func_expr, cmpr_exp)
-        self.assertNotEqual(tuple_expr, aggr_expr)
-        self.assertNotEqual(aggr_expr, tuple_expr)
         self.assertNotEqual(tuple_expr, cmpr_exp)
         self.assertNotEqual(logical_expr, cmpr_exp)

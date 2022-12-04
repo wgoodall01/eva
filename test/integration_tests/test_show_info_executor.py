@@ -18,16 +18,34 @@ import pandas as pd
 
 from eva.catalog.catalog_manager import CatalogManager
 from eva.server.command_handler import execute_query_fetch_all
-from eva.udfs.udf_bootstrap_queries import ArrayCount_udf_query, Fastrcnn_udf_query
+from eva.udfs.udf_bootstrap_queries import EVA_INSTALLATION_DIR
 
 NUM_FRAMES = 10
+
+
+bootstrap_queries = [
+    f"""
+    CREATE UDF IF NOT EXISTS FastRCNNObjectDetector
+    INPUT  (Frame_Array NDARRAY UINT8(3, ANYDIM, ANYDIM))
+    OUTPUT (labels NDARRAY STR(ANYDIM), bboxes NDARRAY FLOAT32(ANYDIM, 4),
+    scores NDARRAY FLOAT32(ANYDIM))
+    TYPE  Classification
+    IMPL '{EVA_INSTALLATION_DIR}/udfs/fastrcnn_object_detector.py';
+    """,
+    f"""
+    CREATE UDF IF NOT EXISTS Array_Count
+    INPUT (Input_Array NDARRAY ANYTYPE, Search_Key ANYTYPE)
+    OUTPUT (key_count INTEGER)
+    TYPE NdarrayUDF
+    IMPL "{EVA_INSTALLATION_DIR}/udfs/ndarray/array_count.py";
+    """,
+]
 
 
 class ShowExecutorTest(unittest.TestCase):
     def setUp(self):
         CatalogManager().reset()
-        queries = [Fastrcnn_udf_query, ArrayCount_udf_query]
-        for query in queries:
+        for query in bootstrap_queries:
             execute_query_fetch_all(query)
 
     # integration test
